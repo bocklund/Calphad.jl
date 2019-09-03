@@ -1,0 +1,1 @@
+const MIN_SITE_FRACTION = 1.0e-14;
