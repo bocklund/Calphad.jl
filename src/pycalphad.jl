@@ -3,8 +3,9 @@
 using PyCall, UUIDs
 sympy = pyimport("sympy")
 pycalphad = pyimport("pycalphad")
-pycalphad.Database
-pycalphad.Model
+Database(x) = pycalphad.Database(x)
+Model(dbf, comps, phase, parameters) = pycalphad.Model(dbf, comps, phase, parameters)
+Model(dbf, comps, phase) = pycalphad.Model(dbf, comps, phase)
 
 # Regex for binary operations that may not be space-separated
 # (bug in SymPy Julia code printing)
@@ -37,7 +38,7 @@ end # function
 
 Convert a pycalphad PyObject constituent array to Julia
 """
-collect_constituents(constituents) = [[sp.name for sp in subl] for subl in constituents]
+collect_constituents(constituents) = [sort!([sp.name for sp in subl]) for subl in constituents]
 
 """
     phase_constituents(dbf, phase_name)
