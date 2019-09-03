@@ -70,3 +70,21 @@ Return a constituent array for a model.
 Will only contain active species by definition.
 """
 active_constituents(model) = collect_constituents(model.constituents)
+
+
+"""
+    PhaseRecord(model, attr)
+
+Create a PhaseRecord from a Model with the attr attribute as the objective.
+"""
+function PhaseRecord(model, attr::String)
+    myfunc, myargs = getfunc(model, attr)
+    return PhaseRecord(model.phase_name, myfunc, myargs, active_constituents(model), get_site_ratios(model))
+end # function
+
+"""
+    PhaseRecord(model)
+
+Create a PhaseRecord from a Model using the GM attribute
+"""
+PhaseRecord(model) = PhaseRecord(model, "GM")
