@@ -93,3 +93,30 @@ function get_nonvacant_pure_elements(species)
     end # if
     return sort!(elements)
 end # function
+
+function calculate(phase_records, statevars, pdens)
+    species = vcat([vcat(prx.constituent_array...) for prx in phase_records]...)
+    nonvacant_pure_elements = get_nonvacant_pure_elements(species)
+    phase_names = []
+    point_nbrs = []
+    allpoints = []
+    phase_values = []
+    max_internal_dof = 0
+    compositions = []
+    for prx in phase_records
+        points = sample_phase_constitution(prx, 11)
+        push!(phase_names, prx.name)
+        push!(point_nbrs, size(points)[1])
+        push!(allpoints, points)
+        push!(phase_values, compute_phase_values(statevars, prx, points))
+        max_internal_dof = max(size(points)[2], max_internal_dof)
+        push!(compositions, compute_composition(prx, nonvacant_pure_elements, points))
+    end # for
+    site_fracs = vcat([extend_points(pts, max_internal_dof) for pts in allpoints]...)
+    composition = vcat(compositions...)
+    phases = vcat([fill(phase_names[i], size(allpoints[i])[1]) for i in 1:length(phase_records)]...)
+    output = hcat(phase_values...)
+    ptsidx = collect(1:size(allpoints)[1])
+
+    return CalculateResult(composition, site_fracs, phases, output, ptsidx, statevars)
+end # function
