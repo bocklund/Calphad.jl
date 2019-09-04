@@ -24,3 +24,31 @@ end # begin
     extended_points = Calphad.extend_points(points, 5)
     @test all(size(extended_points) .== (24, 5))
 end # begin
+
+@testset "compute composition" begin
+    dbf = Database("data/Cu-Ni.tdb")
+    model = Model(dbf, ["CU", "NI"], "LIQUID")
+    prx = PhaseRecord(model)
+    points = Calphad.sample_phase_constitution(prx, 11)
+    X = Calphad.compute_composition(prx, ["CU", "NI"], points)
+    # No VA in LIQUID, should be the same as points
+    @test all(X .== points)
+
+    # FCC has VA in the second sublattice: (CU, NI):(VA)
+    model = Model(dbf, ["CU", "NI", "VA"], "FCC_A1")
+    prx = PhaseRecord(model)
+    points = Calphad.sample_phase_constitution(prx, 5)
+    @test all(size(points) .== (12, 3))
+    # Only pure elements have compositions
+    X = Calphad.compute_composition(prx, ["CU", "NI"], points)
+    @test all(size(X) .== (12, 2))
+    @test all(sum(X, dims=2) .≈ ones(12))
+
+    X = Calphad.compute_composition(prx, ["CU", "NI", "CR", "FE"], points)
+    @test all(size(X) .== (12, 4))
+    # sorted index of CR and FE are 1 and 3. Both columns should be zero.
+    @test all(X[:, 1] .== 0.0)
+    @test all(X[:, 3] .== 0.0)
+    @test all(sum(X, dims=2) .≈ ones(12))
+
+end # begin
