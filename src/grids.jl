@@ -27,7 +27,7 @@ function endmember_matrix(dof, vacancy_indices=[])
     # Remove the one vacancy only endmember, if it exists. We essentially copy the array
     # here to remove just one endmember, but it's likely rare that we hit this code path.
     if length(vacancy_indices) == nsubl
-        purevaidx = vacancy_indicies + subl_offset
+        purevaidx = vacancy_indices + subl_offset
         res_matrix = permutedims(hcat([res_matrix[em, :] for em in 1:size(res_matrix)[1] if sum(res_matrix[em, purevaidx] .== 1) != nsubl]...))
     end
     # Normalize site fractions to the numerical limit
@@ -97,4 +97,42 @@ function point_sample(dof::Array{Int,1}, density::Integer)
         start_idx = end_idx + 1
     end # for
     return pts
+end # function
+
+
+function sample_phase_constitution(prx::PhaseRecord, pdens)
+    phase_constituents = prx.constituent_array
+    sublattice_dof = [length(subl) for subl in phase_constituents]
+    sampler = halton  # TODO: assumption
+    fixed_grid = true  # TODO: assumption
+
+    # Eliminate pure VA endmembers
+    va_idx = []
+    for subl_idx in 1:length(phase_constituents)
+        sublattice = phase_constituents[subl_idx]
+        active_in_subl = sort(sublattice)
+        for sp_idx in 1:length(sublattice)
+            if sublattice[sp_idx] == "VA"
+                push!(va_idx, sp_idx)
+            end # if
+        end # for
+    end # for
+
+    # Endmember points
+    if length(va_idx) == length(phase_constituents)
+        # There is a vacancy in each sublattice, these need to be removed from points
+        points = endmember_matrix(sublattice_dof, va_idx)
+    else
+        points = endmember_matrix(sublattice_dof)
+    end # if
+
+    # Sample along endmember edges
+    if fixed_grid
+        points = [points; grid_sample(points, pdens)]
+    end # if
+
+    # Randomly sample the space
+    points = [points; point_sample(sublattice_dof, pdens)]
+
+    return points
 end # function

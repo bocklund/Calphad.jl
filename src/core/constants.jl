@@ -1,1 +1,1 @@
-const MIN_SITE_FRACTION = 1.0e-14;
+const MIN_SITE_FRACTION = 1.0e-15;
