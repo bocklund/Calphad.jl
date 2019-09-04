@@ -1,6 +1,6 @@
 # Tests for sampling grids
 
-@testset "grids" begin
+@testset "sample phase constitution" begin
     dbf = Database("data/Cu-Ni.tdb")
     model = Model(dbf, ["CU", "NI"], "LIQUID")
     prx = PhaseRecord(model)

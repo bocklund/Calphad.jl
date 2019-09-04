@@ -1,5 +1,5 @@
 
-@testset "pycalphad interface" begin
+@testset "pycalphad PhaseRecord interface" begin
     # Database loading
     dbf = Database("data/Cu-Ni.tdb")
     # elements:
