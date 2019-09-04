@@ -15,3 +15,16 @@ function compute_phase_values(statevar_dict, prx, points)
     end # for
     return vals
 end # function
+
+function extend_points(points, max_internal_dof)
+    # TODO: eventually we should preallocate the points so this is unnecessary
+    nbpts = size(points)[1]
+    additional_dof = max_internal_dof - size(points)[2]
+    if additional_dof > 0
+        return [points fill(NaN, nbpts, additional_dof)]
+    elseif additional_dof == 0
+        return points
+    else
+        error("Maximum internal degrees of freedom must be greater than or equal to degree of freedom")
+    end # if
+end # function

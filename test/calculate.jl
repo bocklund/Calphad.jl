@@ -14,3 +14,13 @@
     ]
     @test all(phase_vals .≈ pycalphad_values)
 end # begin
+
+@testset "extend points" begin
+    dbf = Database("data/Cu-Ni.tdb")
+    model = Model(dbf, ["CU", "NI"], "LIQUID")
+    prx = PhaseRecord(model)
+    points = Calphad.sample_phase_constitution(prx, 11)
+    @test all(size(points) .== (24, 2))
+    extended_points = Calphad.extend_points(points, 5)
+    @test all(size(extended_points) .== (24, 5))
+end # begin
