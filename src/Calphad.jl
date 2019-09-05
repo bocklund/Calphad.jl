@@ -3,22 +3,22 @@
 __precompile__(false)
 module Calphad
 
-# Core structures and costants
+# Core structures and files no internal dependencies
+include("constants.jl")
+include("hyperplane.jl")
 include("phase_record.jl")
 include("result.jl")
-include("core/compositionset.jl")
-include("core/constants.jl")
+include("sampling.jl")
+include("utils.jl")
 
-# Files with no internal dependencies
-include("core/halton.jl")
+# Dependent structures
+include("compositionset.jl")
 
 # Everything else
+include("calculate.jl")
 include("pycalphad.jl")
 include("solver.jl")
-include("core/hyperplane.jl")
-include("calculate.jl")
-include("grids.jl")
 
-export PhaseRecord, Database, Model, calculate
+export Database, Grid, Model, PhaseRecord, calculate
 
 end # module
