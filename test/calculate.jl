@@ -64,7 +64,8 @@ end # begin
 
     statevars = Dict("T"=>[500.0, 1000.0, 1500.0, 2000.0])
     cr = calculate(prxs, statevars, 11)
-    @test isa(cr, Calphad.CalculateResult)
+    @test isa(cr, Calphad.Grid)
+    @test isa(cr, Calphad.Result)
     npts = 48
     @test all(size(cr.X) .== (npts, 2))
     @test all(size(cr.Y) .== (npts, 3))

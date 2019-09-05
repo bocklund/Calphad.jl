@@ -118,5 +118,5 @@ function calculate(phase_records, statevars, pdens)
     output = hcat(phase_values...)
     ptsidx = collect(1:size(allpoints)[1])
 
-    return CalculateResult(composition, site_fracs, phases, output, ptsidx, statevars)
+    return Grid(composition, site_fracs, phases, output, ptsidx, statevars)
 end # function

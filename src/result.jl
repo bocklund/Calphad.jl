@@ -1,6 +1,6 @@
 abstract type Result end
 
-struct CalculateResult
+struct Grid <: Result
     X::Array{Float64, 2}
     Y::Array{Float64,2 }
     Phase::Array{String, 1}
