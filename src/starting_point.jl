@@ -206,7 +206,7 @@ end # function
 function starting_point(phase_records::Array{PhaseRecord, 1}, components::Array{String, 1}, grid::Grid, statevar_index::CartesianIndex, conditions::Dict{String, Float64})
     components = sort(components)
     ncomps = length(components)
-    indep_comp_conds = [c for c in keys(conditions) if any(startswith.(c, ["X_", "MU_"]))]
+    indep_comp_conds = filter(xx->!statevarfilter(xx), keys(conditions))
     fixed_comps = sort!([c[3:end] for c in indep_comp_conds if startswith(c, "X_")])
     fixed_chempots = sort!([c[4:end] for c in indep_comp_conds if startswith(c, "MU_")])
     fixed_comp_indices = Int[findfirst(xx->xx==c, components) for c in fixed_comps]

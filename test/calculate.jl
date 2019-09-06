@@ -91,5 +91,4 @@ end # begin
     # @test all(size(cr.output) .== (npts,))  # 4 = statevars shape
     # @test all(size(cr.statevars["T"]) .== size(statevars["T"]))
 
-
 end # begin
