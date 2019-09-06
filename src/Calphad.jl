@@ -13,13 +13,14 @@ include("utils.jl")
 # Dependent structures
 include("compositionset.jl")
 include("starting_point.jl")
+include("solver.jl")
 
 # Everything else
 include("calculate.jl")
+include("equilibrium.jl")
 include("pycalphad.jl")
-include("solver.jl")
 
 export Database, CompositionSet, Grid, Model, PhaseRecord
-export calculate, starting_point
+export calculate, local_equilibrium!, starting_point
 
 end # module

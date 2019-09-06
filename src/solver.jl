@@ -74,7 +74,7 @@ function moles_from_phase(model::JuMP.Model, species::String, prx::AbstractPhase
 	end
 end
 
-function add_phase_fraction_variable(model::JuMP.Model, prx::AbstractPhaseRecord)::VariableRef
+function add_phase_fraction_variable(model::JuMP.Model, prx::AbstractPhaseRecord)::JuMP.VariableRef
 	return JuMP.@variable(model, lower_bound=0.0, upper_bound=1.0, base_name=string("NP", phaserecord(prx).name))
 end
 
@@ -109,13 +109,14 @@ function build_model(all_phase_records::Array{TY, 1}, comps::Array{String,1}) wh
 	comps = sort(comps)
 	num_comps = length(comps)
 
-	model = JuMP.Model(with_optimizer(Ipopt.Optimizer, print_level=0))
+	model = JuMP.Model(JuMP.with_optimizer(Ipopt.Optimizer, print_level=0))
 
 	# State variables
+	# TODO: fix implicit P, T conditions
 	JuMP.@variable(model, T >= 0)
 	JuMP.@variable(model, P >= 0)
 
-	phase_fractions = Array{VariableRef, 1}(undef, length(all_phase_records))
+	phase_fractions = Array{JuMP.VariableRef, 1}(undef, length(all_phase_records))
 	objectives = Array{Any, 1}(undef, length(all_phase_records))
 	current_expression = nothing
 	for prx_idx in 1:length(all_phase_records)
@@ -126,7 +127,7 @@ function build_model(all_phase_records::Array{TY, 1}, comps::Array{String,1}) wh
 		phase_fractions[prx_idx] = NP
 		obj_sym = Symbol(string(phase_rec.name, "_OBJ"))
 		JuMP.register(model, obj_sym, 2+length(internal_dof), phase_rec.obj, autodiff=true)
-		obj_expr = Expr(:call, :*, NP, Expr(:call, obj_sym, P, T, internal_dof...))
+		obj_expr = Expr(:call, :*, NP, Expr(:call, obj_sym, P, T, internal_dof...)) # TODO: implicit P, T  conditions
 		current_expression = add_expressions(current_expression, obj_expr)
 	end
 
@@ -136,7 +137,7 @@ function build_model(all_phase_records::Array{TY, 1}, comps::Array{String,1}) wh
 	moles = moles_array(model, all_phase_records, comps)
 	JuMP.@NLconstraint(model, sum(moles[i] for i in 1:length(moles)) == 1.0)
 
-	JuMP.set_NL_objective(model, MOI.MIN_SENSE, current_expression)
+	JuMP.set_NL_objective(model, JuMP.MOI.MIN_SENSE, current_expression)
 
 	return model
 end
