@@ -1,6 +1,6 @@
 struct CompositionSet
 	name::String
-	dof::Array{Real}
+	dof::Array{Float64}
 	NP::AbstractFloat
 	energy::AbstractFloat
 	phase_record::PhaseRecord
