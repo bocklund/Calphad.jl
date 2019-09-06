@@ -95,7 +95,7 @@ function calculate(phase_records, statevars, pdens)
     max_internal_dof = 0
     compositions = []
     for prx in phase_records
-        points = sample_phase_constitution(prx, 11)
+        points = sample_phase_constitution(prx, pdens)
         push!(phase_names, prx.name)
         push!(point_nbrs, size(points)[1])
         push!(allpoints, points)
@@ -106,7 +106,8 @@ function calculate(phase_records, statevars, pdens)
     site_fracs = vcat([extend_points(pts, max_internal_dof) for pts in allpoints]...)
     composition = vcat(compositions...)
     phases = vcat([fill(phase_names[i], size(allpoints[i])[1]) for i in 1:length(phase_records)]...)
-    output = hcat(phase_values...)
+    output = cat(phase_values..., dims=length(size(phase_values[1])))
+
     ptsidx = collect(1:size(site_fracs)[1])
 
     return Grid(composition, site_fracs, phases, output, ptsidx, statevars)

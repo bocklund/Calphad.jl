@@ -4,7 +4,7 @@
     dbf = Database("data/Cu-Ni.tdb")
     # elements:
     @test length(dbf.elements) == 4  # elements: /-, CU, NI, VA
-    @test length(dbf._parameters.all()) == 14
+    @test length(dbf._parameters.all()) == 24
 
     # Model successfully instantiated
     model = Model(dbf, ["CU", "NI", "VA"], "FCC_A1")
@@ -17,4 +17,21 @@
     @test all(prx.constituent_array .== [["CU", "NI"], ["VA"]])
     @test all(prx.args .== ["T", "FCC_A10CU", "FCC_A10NI", "FCC_A11VA"])
     @test all(prx.subl_site_ratios .== [1, 1])
+
+    # build with additional state variables, no new statevars added
+    prx = PhaseRecord(model, ["T"])
+    @test prx.obj(500.0, 0.5, 0.5, 1.0) ≈ -17500.249086
+    @test prx.name == "FCC_A1"
+    @test all(prx.constituent_array .== [["CU", "NI"], ["VA"]])
+    @test all(prx.args .== ["T", "FCC_A10CU", "FCC_A10NI", "FCC_A11VA"])
+    @test all(prx.subl_site_ratios .== [1, 1])
+
+    # build with additional state variables, P added
+    prx = PhaseRecord(model, ["T", "P"]) # P after T to test sorting.
+    @test prx.obj(101325.0, 500.0, 0.5, 0.5, 1.0) ≈ -17500.249086
+    @test prx.name == "FCC_A1"
+    @test all(prx.constituent_array .== [["CU", "NI"], ["VA"]])
+    @test all(prx.args .== ["P", "T", "FCC_A10CU", "FCC_A10NI", "FCC_A11VA"])
+    @test all(prx.subl_site_ratios .== [1, 1])
+
 end # begin

@@ -2,32 +2,32 @@ $ CUNI
 $
 $ -----------------------------------------------------------------------------
 $ 2007.2.5
-$ 
+$
 $ TDB file created by K.Hashimoto and T.Abe,
 $
-$ Particle Simulation and Thermodynamics Group, National Institute for 
+$ Particle Simulation and Thermodynamics Group, National Institute for
 $ Materials Science. 1-2-1 Sengen, Tsukuba, Ibaraki 305-0047, Japan
-$ 
+$
 $ e-mail: abe.taichi@nims.go.jp
 $
 $ Copyright (C) NIMS 2007
 $ -----------------------------------------------------------------------------
 $
-$ Parameters for liquid are taken from 
+$ Parameters for liquid are taken from
 $ S.Mey, CALPHAD, 16 (1992) 255-260.
 $
 $
 $ -----------------------------------------------------------------------------
 $
-$ 
- 
-               
+$
+
+
  ELEMENT /-   ELECTRON_GAS              0.0000E+00  0.0000E+00  0.0000E+00!
  ELEMENT VA   VACUUM                    0.0000E+00  0.0000E+00  0.0000E+00!
  ELEMENT CU   FCC_A1                    6.3546E+01  5.0041E+03  3.3150E+01!
  ELEMENT NI   FCC_A1                    5.8690E+01  4.7870E+03  2.9796E+01!
- 
- 
+
+
  FUNCTION GHSERCU    2.98150E+02  -7770.458+130.485403*T-24.112392*T*LN(T)
      -.00265684*T**2+1.29223E-07*T**3+52478*T**(-1);            1358.02 Y
       -13542.33+183.804197*T-31.38*T*LN(T)+3.64643E+29*T**(-9); 3200 N !
@@ -35,7 +35,7 @@ $
      -.0048407*T**2;  1.72800E+03  Y
       -27840.655+279.135*T-43.1*T*LN(T)+1.12754E+31*T**(-9);    3000 N !
  FUNCTION UN_ASS 298.15 0; 3000 N !
- 
+
  TYPE_DEFINITION % SEQ *!
  DEFINE_SYSTEM_DEFAULT ELEMENT 2 !
  DEFAULT_COMMAND DEF_SYS_ELEMENT VA /- !
@@ -70,4 +70,17 @@ $
    PARAMETER BMAGN(FCC_A1,CU,NI:VA;1) 2.98150E+02 -0.3170;            6000 N !
 
 
- 
+$ A1 contains no VA for testing purposes
+   TYPE_DEFINITION & GES A_P_D A1 MAGNETIC  -3.0    2.80000E-01 !
+   PHASE A1  %&  1  1 !
+      CONSTITUENT A1  :CU%,NI% : !
+     PARAMETER G(A1,CU;0)        2.98150E+02 +GHSERCU#;          3200 N !
+     PARAMETER G(A1,NI;0)        2.98150E+02 +GHSERNI#;          3000 N !
+     PARAMETER TC(A1,NI;0)       2.98150E+02 +633;               6000 N !
+     PARAMETER BMAGN(A1,NI;0)    2.98150E+02 +0.52;              6000 N !
+     PARAMETER G(A1,CU,NI;0)     2.98150E+02 +8047.7+3.42217*T;  6000 N !
+     PARAMETER G(A1,CU,NI;1)     2.98150E+02 -2041.30+0.99714*T; 6000 N !
+     PARAMETER TC(A1,CU,NI;0)    2.98150E+02 -935.5;             6000 N !
+     PARAMETER TC(A1,CU,NI;1)    2.98150E+02 -594.9;             6000 N !
+     PARAMETER BMAGN(A1,CU,NI;0) 2.98150E+02 -0.7320;            6000 N !
+     PARAMETER BMAGN(A1,CU,NI;1) 2.98150E+02 -0.3170;            6000 N !

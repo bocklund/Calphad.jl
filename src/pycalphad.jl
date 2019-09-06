@@ -23,9 +23,9 @@ end # function
 Get a callable function for a Model attribute, with any additional state variables added.
 The function is appended with a UUID to ensure the function signature is unique.
 """
-function getfunc(model, attr; additional_statevars=Array{String}(undef, 0))
+function getfuncsv(model, attr, additional_statevars::Array{String, 1})
     expr = model.__getattribute__(attr)
-    statevars = sort!(vcat([sym.name for sym in model.state_variables], additional_statevars))
+    statevars = sort!(unique!(vcat([sym.name for sym in model.state_variables], additional_statevars)))
     sitefracs = sort!([sym.name for sym in model.site_fractions])
     funcargs = vcat(statevars, sitefracs)
     funcname = attr * "_" * model.phase_name * replace(string(uuid1()), "-" => "_")
@@ -72,14 +72,19 @@ Will only contain active species by definition.
 active_constituents(model) = collect_constituents(model.constituents)
 
 
+function PhaseRecord(model, attr::String, additional_statevars::Array{String, 1})
+    myfunc, myargs = getfuncsv(model, attr, additional_statevars)
+    return PhaseRecord(model.phase_name, myfunc, myargs, active_constituents(model), get_site_ratios(model))
+end # function
+
+
 """
     PhaseRecord(model, attr)
 
 Create a PhaseRecord from a Model with the attr attribute as the objective.
 """
 function PhaseRecord(model, attr::String)
-    myfunc, myargs = getfunc(model, attr)
-    return PhaseRecord(model.phase_name, myfunc, myargs, active_constituents(model), get_site_ratios(model))
+    PhaseRecord(model, attr, String[])
 end # function
 
 """
@@ -88,3 +93,4 @@ end # function
 Create a PhaseRecord from a Model using the GM attribute
 """
 PhaseRecord(model) = PhaseRecord(model, "GM")
+PhaseRecord(model, additional_statevars::Array{String, 1}) = PhaseRecord(model, "GM", additional_statevars)
