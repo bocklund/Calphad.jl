@@ -107,7 +107,7 @@ function calculate(phase_records, statevars, pdens)
     composition = vcat(compositions...)
     phases = vcat([fill(phase_names[i], size(allpoints[i])[1]) for i in 1:length(phase_records)]...)
     output = hcat(phase_values...)
-    ptsidx = collect(1:size(allpoints)[1])
+    ptsidx = collect(1:size(site_fracs)[1])
 
     return Grid(composition, site_fracs, phases, output, ptsidx, statevars)
 end # function
