@@ -5,7 +5,6 @@ module Calphad
 
 # Core structures and files no internal dependencies
 include("constants.jl")
-include("hyperplane.jl")
 include("phase_record.jl")
 include("result.jl")
 include("sampling.jl")
@@ -13,12 +12,14 @@ include("utils.jl")
 
 # Dependent structures
 include("compositionset.jl")
+include("starting_point.jl")
 
 # Everything else
 include("calculate.jl")
 include("pycalphad.jl")
 include("solver.jl")
 
-export Database, Grid, Model, PhaseRecord, calculate
+export Database, CompositionSet, Grid, Model, PhaseRecord
+export calculate, starting_point
 
 end # module
