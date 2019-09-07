@@ -12,6 +12,6 @@
     statevars = Dict([(ky, conditions[ky]) for ky in keys(conditions) if !any(startswith.(ky, ["X_", "MU_"]))])
     grid = calculate(prxs, statevars, 11)
     particular_conds = Dict([(ky, conditions[ky][1]) for ky in keys(conditions)]) # e.g. how these would be found iteratively
-    compsets = starting_point(prxs, comps, grid, CartesianIndex(1, 1), particular_conds)
+    compsets = starting_point(prxs, comps, grid, CartesianIndex(1, 1), particular_conds) # hardcoded index of conditions
     prb = local_equilibrium!(compsets, ["CU", "NI"], particular_conds)
 end # begin
