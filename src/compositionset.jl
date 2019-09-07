@@ -1,4 +1,4 @@
-struct CompositionSet
+mutable struct CompositionSet
 	name::String
 	dof::Array{Float64}
 	NP::AbstractFloat

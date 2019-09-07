@@ -1,4 +1,5 @@
 
+energy(problem::JuMP.Model) = JuMP.objective_value(problem)
 
 function local_equilibrium!(compsets::Array{CompositionSet, 1}, components::Array{String, 1}, conditions::Dict{String, Float64})
     # TODO: edge cases where compsets of the same phase will raise an error
@@ -30,9 +31,14 @@ function local_equilibrium!(compsets::Array{CompositionSet, 1}, components::Arra
         carr = cs.phase_record.constituent_array
         JuMP.set_start_value.(internal_dof_variable(problem, cs.phase_record, i), cs.dof)
     end # for
-    JuMP.
     JuMP.optimize!(problem)
 
+    for i in 1:length(compsets)
+        cs = compsets[i]
+        cs.NP = JuMP.value(JuMP.variable_by_name(problem, "NP$i"))
+        cs.dof = JuMP.value.(JuMP.variable_by_name.(problem, ["INTERNAL_DOF$i[$j]" for j in 1:length(cs.dof)]))
+        # TODO: maybe want to set the energy, but it needs another function eval, which we may want to avoid
+    end # for
     # TODO: update compsets; for now, just return the problem
     return problem
 end # function
