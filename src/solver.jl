@@ -9,11 +9,11 @@ import JuMP
 import Ipopt
 
 
-function phase_fracion_variable(model::JuMP.Model, prx::AbstractPhaseRecord)
-	return JuMP.variable_by_name(model, string("NP", phaserecord(prx).name))
+function phase_fracion_variable(model::JuMP.Model, identifier)
+	return JuMP.variable_by_name(model, "NP$identifier")
 end
 
-function internal_dof_variable(model::JuMP.Model, prx::AbstractPhaseRecord)
+function internal_dof_variable(model::JuMP.Model, prx::AbstractPhaseRecord, identifier)
     phase_record = phaserecord(prx)
 	const_array = phase_record.constituent_array
 	num_subl = length(const_array)
@@ -22,11 +22,11 @@ function internal_dof_variable(model::JuMP.Model, prx::AbstractPhaseRecord)
 	for subl_idx in 1:num_subl
 		internal_dof_vec_size += length(const_array[subl_idx])
 	end
-	return [JuMP.variable_by_name(model, string(phase_record.name, "_INTERNAL_DOF[", i, "]")) for i in 1:internal_dof_vec_size]
+	return [JuMP.variable_by_name(model, "INTERNAL_DOF$(identifier)[$(i)]") for i in 1:internal_dof_vec_size]
 end
 
 
-function add_phase_internal_constraints(model::JuMP.Model, prx::AbstractPhaseRecord)
+function add_phase_internal_constraints(model::JuMP.Model, prx::AbstractPhaseRecord, identifier)
 	phase_record = phaserecord(prx)
 	const_array = phase_record.constituent_array
 	num_subl = length(const_array)
@@ -35,8 +35,7 @@ function add_phase_internal_constraints(model::JuMP.Model, prx::AbstractPhaseRec
 	for subl_idx in 1:num_subl
 		internal_dof_vec_size += length(const_array[subl_idx])
 	end
-	# internal_dof = @variable(model, [1:internal_dof_vec_size], lower_bound=MIN_SITE_FRACTION, upper_bound=1.0, base_name=string(phase_record.name, "_INTERNAL_DOF"))
-	internal_dof = JuMP.@variable(model, [1:internal_dof_vec_size], lower_bound=MIN_SITE_FRACTION, upper_bound=1.0, base_name=string(phase_record.name, "_INTERNAL_DOF"))
+	internal_dof = JuMP.@variable(model, [1:internal_dof_vec_size], lower_bound=MIN_SITE_FRACTION, upper_bound=1.0, base_name="INTERNAL_DOF$(identifier)")
 
 	# add constraints for each sublattice
 	dof_offset = 0
@@ -48,7 +47,7 @@ function add_phase_internal_constraints(model::JuMP.Model, prx::AbstractPhaseRec
 end
 
 # requires that phase internal constraints are already specified
-function moles_from_phase(model::JuMP.Model, species::String, prx::AbstractPhaseRecord)
+function moles_from_phase(model::JuMP.Model, species::String, prx::AbstractPhaseRecord, identifier)
 	phase_record = phaserecord(prx)
 	const_array = phase_record.constituent_array
 	phase_name = phase_record.name
@@ -60,7 +59,7 @@ function moles_from_phase(model::JuMP.Model, species::String, prx::AbstractPhase
 		for const_idx in 1:length(const_array[subl_idx])
 			internal_dof_idx += 1
 			if const_array[subl_idx][const_idx] == species
-				vv = JuMP.variable_by_name(model, string(phase_name, "_INTERNAL_DOF[", internal_dof_idx, "]"))
+				vv = JuMP.variable_by_name(model, "INTERNAL_DOF$(identifier)[$(internal_dof_idx)]")
 				mm = JuMP.@NLexpression(model, vv*phase_record.subl_site_ratios[subl_idx])
 				push!(moles_vars, mm)
 			end
@@ -74,8 +73,8 @@ function moles_from_phase(model::JuMP.Model, species::String, prx::AbstractPhase
 	end
 end
 
-function add_phase_fraction_variable(model::JuMP.Model, prx::AbstractPhaseRecord)::JuMP.VariableRef
-	return JuMP.@variable(model, lower_bound=0.0, upper_bound=1.0, base_name=string("NP", phaserecord(prx).name))
+function add_phase_fraction_variable(model::JuMP.Model, identifier)::JuMP.VariableRef
+	return JuMP.@variable(model, lower_bound=0.0, upper_bound=1.0, base_name="NP$(identifier)")
 end
 
 function moles_array(model::JuMP.Model, phase_records::Array{TY}, comps::Array{String,1}) where {TY<:AbstractPhaseRecord}
@@ -86,10 +85,11 @@ function moles_array(model::JuMP.Model, phase_records::Array{TY}, comps::Array{S
 	moles = Array{Union{JuMP.NonlinearExpression}, 1}(undef, num_comps)
 	for comp_idx in 1:num_comps
 		prx_moles = []
-		for phase_rec in phase_records
+		for i in 1:length(phase_records)
+			phase_rec = phase_records[i]
 			# NP*N(comp)
-			mm = moles_from_phase(model, comps[comp_idx], phase_rec)
-			npvv = phase_fracion_variable(model, phase_rec)
+			mm = moles_from_phase(model, comps[comp_idx], phase_rec, i)
+			npvv = phase_fracion_variable(model, i)
 			push!(prx_moles, JuMP.@NLexpression(model, mm*npvv))
 		end
 		moles[comp_idx] = JuMP.@NLexpression(model, sum(prx_moles[i] for i in 1:length(prx_moles)))
@@ -121,11 +121,11 @@ function build_model(all_phase_records::Array{TY, 1}, comps::Array{String,1}) wh
 	current_expression = nothing
 	for prx_idx in 1:length(all_phase_records)
 		phase_rec = all_phase_records[prx_idx]
-		add_phase_internal_constraints(model, phase_rec)
-		internal_dof = internal_dof_variable(model, phase_rec)
-		NP =  add_phase_fraction_variable(model, phase_rec)
+		add_phase_internal_constraints(model, phase_rec, prx_idx)
+		internal_dof = internal_dof_variable(model, phase_rec, prx_idx)
+		NP =  add_phase_fraction_variable(model, prx_idx)
 		phase_fractions[prx_idx] = NP
-		obj_sym = Symbol(string(phase_rec.name, "_OBJ"))
+		obj_sym = Symbol("$(prx_idx)_OBJ")
 		JuMP.register(model, obj_sym, 2+length(internal_dof), phase_rec.obj, autodiff=true)
 		obj_expr = Expr(:call, :*, NP, Expr(:call, obj_sym, P, T, internal_dof...)) # TODO: implicit P, T  conditions
 		current_expression = add_expressions(current_expression, obj_expr)

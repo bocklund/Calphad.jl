@@ -22,12 +22,13 @@ function local_equilibrium!(compsets::Array{CompositionSet, 1}, components::Arra
     end # if
 
     # initial guess
-    for cs in compsets
+    for i in 1:length(compsets)
+        cs = compsets[i]
         phase_name = cs.name
-        var = JuMP.variable_by_name(problem, "NP$phase_name")
+        var = JuMP.variable_by_name(problem, "NP$i")
         JuMP.set_start_value(var, cs.NP)
         carr = cs.phase_record.constituent_array
-        JuMP.set_start_value.(internal_dof_variable(problem, cs.phase_record), cs.dof)
+        JuMP.set_start_value.(internal_dof_variable(problem, cs.phase_record, i), cs.dof)
     end # for
     JuMP.
     JuMP.optimize!(problem)
