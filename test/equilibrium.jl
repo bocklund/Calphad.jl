@@ -16,7 +16,9 @@ import JuMP
     particular_conds = Dict([(ky, conditions[ky][1]) for ky in keys(conditions)]) # e.g. how these would be found iteratively
     compsets = starting_point(prxs, comps, grid, CartesianIndex(1, 1), particular_conds) # hardcoded index of conditions
     prb = local_equilibrium!(compsets, ["CU", "NI"], particular_conds)
+    compsets = Calphad.unique_compsets(compsets)
     # pycalphad 0.8 validated
+    @test length(compsets) == 2
     @test compsets[1].NP ≈ 0.7347958179763151
     @test compsets[2].NP ≈ 0.2652041820236848
     @test all(compsets[1].dof .≈ [0.5375428184637843, 0.46245718153621573])
@@ -38,9 +40,17 @@ import JuMP
     particular_conds = Dict("T"=>1200.0, "P"=>101325.0, "X_NI"=>0.5) # e.g. how these would be found iteratively
     compsets = starting_point(prxs, comps, grid, CartesianIndex(1, 2), particular_conds) # hardcoded index of conditions
     prb = local_equilibrium!(compsets, ["CU", "NI"], particular_conds)
+    compsets = Calphad.unique_compsets(compsets)
     # NP values are arbitrary because it's the same phase
+    @test length(compsets) == 1
     @test all(compsets[1].dof .≈ [0.5, 0.5])
-    @test all(compsets[2].dof .≈ [0.5, 0.5])
+    @test Calphad.energy(prb) ≈ -63185.74156548
+    # Refine solution with pruned compsets
+    prb = local_equilibrium!(compsets, ["CU", "NI"], particular_conds)
+    println(prb)
+    println(JuMP.termination_status(prb))
+    @test compsets[1].NP == 1.0
+    @test all(compsets[1].dof .≈ [0.5, 0.5])
     @test Calphad.energy(prb) ≈ -63185.74156548
 
 end # begin

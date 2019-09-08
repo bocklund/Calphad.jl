@@ -78,6 +78,7 @@ function add_phase_fraction_variable(model::JuMP.Model, identifier)::JuMP.Variab
 end
 
 function moles_array(model::JuMP.Model, phase_records::Array{TY}, comps::Array{String,1}) where {TY<:AbstractPhaseRecord}
+	multiphase_problem = length(phase_records) > 1
 	comps = sort(comps)
 	num_comps = length(comps)
 
@@ -89,8 +90,12 @@ function moles_array(model::JuMP.Model, phase_records::Array{TY}, comps::Array{S
 			phase_rec = phase_records[i]
 			# NP*N(comp)
 			mm = moles_from_phase(model, comps[comp_idx], phase_rec, i)
-			npvv = phase_fracion_variable(model, i)
-			push!(prx_moles, JuMP.@NLexpression(model, mm*npvv))
+			if multiphase_problem
+				npvv = phase_fracion_variable(model, i)
+				push!(prx_moles, JuMP.@NLexpression(model, mm*npvv))
+			else
+				push!(prx_moles, JuMP.@NLexpression(model, mm))
+			end # if
 		end
 		moles[comp_idx] = JuMP.@NLexpression(model, sum(prx_moles[i] for i in 1:length(prx_moles)))
 	end
@@ -106,13 +111,15 @@ function add_expressions(current::Union{Expr, Nothing}, new::Expr)::Expr
 end
 
 function build_model(all_phase_records::Array{TY, 1}, comps::Array{String,1}) where {TY<:AbstractPhaseRecord}
+	multiphase_problem = length(all_phase_records) > 1
 	comps = sort(comps)
 	num_comps = length(comps)
 
-	model = JuMP.Model(JuMP.with_optimizer(Ipopt.Optimizer, print_level=0))
+	model = JuMP.Model(JuMP.with_optimizer(Ipopt.Optimizer, print_level=3))
 
 	# State variables
 	# TODO: fix implicit P, T conditions
+	num_statevars = 2
 	JuMP.@variable(model, T >= 0)
 	JuMP.@variable(model, P >= 0)
 
@@ -123,16 +130,22 @@ function build_model(all_phase_records::Array{TY, 1}, comps::Array{String,1}) wh
 		phase_rec = all_phase_records[prx_idx]
 		add_phase_internal_constraints(model, phase_rec, prx_idx)
 		internal_dof = internal_dof_variable(model, phase_rec, prx_idx)
-		NP =  add_phase_fraction_variable(model, prx_idx)
-		phase_fractions[prx_idx] = NP
 		obj_sym = Symbol("$(prx_idx)_OBJ")
-		JuMP.register(model, obj_sym, 2+length(internal_dof), phase_rec.obj, autodiff=true)
-		obj_expr = Expr(:call, :*, NP, Expr(:call, obj_sym, P, T, internal_dof...)) # TODO: implicit P, T  conditions
+		if multiphase_problem
+			NP =  add_phase_fraction_variable(model, prx_idx)
+			phase_fractions[prx_idx] = NP
+			obj_expr = Expr(:call, :*, NP, Expr(:call, obj_sym, P, T, internal_dof...)) # TODO: implicit P, T  conditions
+		else
+			obj_expr = Expr(:call, obj_sym, P, T, internal_dof...) # TODO: implicit P, T  conditions
+		end # if
+		JuMP.register(model, obj_sym, num_statevars+length(internal_dof), phase_rec.obj, autodiff=true)
 		current_expression = add_expressions(current_expression, obj_expr)
 	end
 
-	# phase fractions constraint
-	JuMP.@constraint(model, sum(phase_fractions) == 1.0)
+	if multiphase_problem
+		# phase fractions constraint
+		JuMP.@constraint(model, sum(phase_fractions) == 1.0)
+	end # if
 	# add moles constraint, N=1
 	moles = moles_array(model, all_phase_records, comps)
 	JuMP.@NLconstraint(model, sum(moles[i] for i in 1:length(moles)) == 1.0)
