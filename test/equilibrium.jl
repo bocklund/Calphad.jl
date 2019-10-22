@@ -47,8 +47,6 @@ import JuMP
     @test Calphad.energy(prb) ≈ -63185.74156548
     # Refine solution with pruned compsets
     prb = local_equilibrium!(compsets, ["CU", "NI"], particular_conds)
-    println(prb)
-    println(JuMP.termination_status(prb))
     @test compsets[1].NP == 1.0
     @test all(compsets[1].dof .≈ [0.5, 0.5])
     @test Calphad.energy(prb) ≈ -63185.74156548
