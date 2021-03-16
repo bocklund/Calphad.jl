@@ -95,6 +95,27 @@ function get_equilibrium_matrix(compsets)
     return eq_mat
 end
 
+function get_equilibrium_soln(compsets)
+    N = length(compsets[1].phase_rec.mass)  # assume number of elements the same everywhere
+    P = length(compsets)
+    soln = Array{Num}(undef, P+N)
+    for i in 1:P
+        soln[i] = compsets[i].phase_rec.obj
+    end
+    for i in 1:N
+        total = 0.0
+        for ϕ in 1:P
+            cs = compsets[ϕ]
+            for j in 1:length(cs.phase_rec.site_fractions)
+                total += cs.ℵ * c_i_el(cs.phase_rec, j, i)
+            end
+        end
+        soln[P+i] = total
+    end
+    return soln
+end
+
+
 ######################################################
 # Script
 
