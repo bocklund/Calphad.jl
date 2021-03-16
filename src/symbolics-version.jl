@@ -144,7 +144,7 @@ compset = CompSet(prx, [0.5, 0.5, 1.0], 0.2)
 A = get_equilibrium_matrix([compset])
 b = get_equilibrium_soln([compset])
 x = A \ b
-subs_dict = Dict(YM2O30AL => 0.5, YM2O30TI => 0.5, YM2O31O => 1.0, T => 2000.0)
+subs_dict = Dict(Dict(zip(compset.phase_rec.site_fractions, compset.Y))..., T => 2000.0)
 substitute.(x, (subs_dict,))
 
 # Using lapack least squares, need to convert A and b into floats first
