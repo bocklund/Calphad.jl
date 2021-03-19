@@ -157,6 +157,25 @@ end
 ######################################################
 # Script
 
+# Super simple A-B system
+@variables Y_BETA_A Y_BETA_B T
+
+G_BETA_A = 8000.0-10.0*T;
+G_BETA_B = 12000.0-10.0*T;
+G_BETA = Y_BETA_A*G_BETA_A + Y_BETA_B*G_BETA_B + R*T*(Y_BETA_A*log(Y_BETA_A) + Y_BETA_B*log(Y_BETA_B));
+mass_BETA = [Y_BETA_A, Y_BETA_B];
+state_variables = [T];
+site_fractions = [Y_BETA_A, Y_BETA_B];
+prx = PhaseRecord(G_BETA, mass_BETA, state_variables, site_fractions);
+
+
+compset = CompSet(prx, [0.5, 0.5], 1.0);
+soln = solve([compset], Dict(T=>300.0))
+# TODO: chemical potentials flipped, maybe a sign error
+println("Actual chemical potentials: ", soln[1:2])
+println("Expected chemical potentials: ", [3271.04833019, 7271.04833015])
+
+
 
 # Define molar Gibbs energy for (Al,Ti)2(O)3
 @variables YM2O30AL YM2O30TI YM2O31O T
@@ -199,7 +218,7 @@ LinearAlgebra.LAPACK.gelsd!(AA, bb)
 #  PARAM G (LIQUID,O;0) 1 -40000; 10000 N !
 #  PARAM G (LIQUID,TI;0) 1 -20000; 10000 N !
 
-@variables LIQUID0AL LIQUID0O LIQUID0TI
+@variables LIQUID0AL LIQUID0O LIQUID0TI T
 
 G_M_LIQUID = -10000*LIQUID0AL + -40000*LIQUID0O + R*T*(LIQUID0AL*log(LIQUID0AL) + LIQUID0O*log(LIQUID0O))
 mass = [LIQUID0AL, LIQUID0O]
@@ -208,30 +227,22 @@ site_fractions = [LIQUID0AL, LIQUID0O]
 prx = PhaseRecord(G_M_LIQUID, mass, state_variables, site_fractions)
 compset = CompSet(prx, [0.5, 0.5], 1.0)
 
-
-############################################################
-
-
-# Super simple A-B system
-@variables Y_BETA_A Y_BETA_B T
-
-G_BETA_A = 8000.0-10.0*T;
-G_BETA_B = 12000.0-10.0*T;
-G_BETA = Y_BETA_A*G_BETA_A + Y_BETA_B*G_BETA_B + R*T*(Y_BETA_A*log(Y_BETA_A) + Y_BETA_B*log(Y_BETA_B));
-mass_BETA = [Y_BETA_A, Y_BETA_B];
-
-state_variables = [T];
-site_fractions = [Y_BETA_A, Y_BETA_B];
-
-prx = PhaseRecord(G_BETA, mass_BETA, state_variables, site_fractions);
-compset = CompSet(prx, [0.5, 0.5], 1.0);
-
-subs_dict = Dict(Dict(zip(compset.phase_rec.site_fractions, compset.Y))..., T => 300.0)
-
+# Solve
 A = get_equilibrium_matrix([compset]);
 b = get_equilibrium_soln([compset]);
 # Symbolic solution
 x = A \ b;
+subs_dict = Dict(Dict(zip(compset.phase_rec.site_fractions, compset.Y))..., T => 300.0)
+substitute.(x, (subs_dict,))
+
+
+############################################################
+
+
+
+
+
+
 
 # Numerical linear least squares soln
 AA = Symbolics.value.(substitute.(A, (subs_dict,)));
