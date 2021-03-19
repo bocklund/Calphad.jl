@@ -67,6 +67,15 @@ function c_i_el(phase_record, i, el_index)
     return total
 end
 
+function c_i_G(phase_record, i)
+    total = 0.0
+    state_vars_offset = length(phase_record.state_variables)
+    for j in 1:length(phase_record.site_fractions)
+        total -= phase_record.inv_phase_matrix[i,j]*phase_record.grad[state_vars_offset+j]
+    end
+    return total
+end
+
 function get_equilibrium_matrix(compsets)
     N = length(compsets[1].phase_rec.mass)  # assume number of elements the same everywhere
     P = length(compsets)
@@ -104,15 +113,16 @@ function get_equilibrium_soln(compsets)
     for i in 1:P
         soln[i] = compsets[i].phase_rec.obj
     end
-    for i in 1:N
+    for A in 1:N
         total = 0.0
         for ϕ in 1:P
             cs = compsets[ϕ]
-            for j in 1:length(cs.phase_rec.site_fractions)
-                total += cs.ℵ * c_i_el(cs.phase_rec, j, i)
+            state_vars_offset = length(cs.phase_rec.state_variables)
+            for _i in 1:length(cs.phase_rec.site_fractions)
+                total += cs.ℵ * cs.phase_rec.mass_jac[A,state_vars_offset+_i] * c_i_G(cs.phase_rec, _i)
             end
         end
-        soln[P+i] = total
+        soln[P+A] = total
     end
     return soln
 end
