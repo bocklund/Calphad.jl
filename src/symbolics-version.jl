@@ -119,9 +119,14 @@ function get_equilibrium_soln(compsets)
             cs = compsets[ϕ]
             state_vars_offset = length(cs.phase_rec.state_variables)
             for _i in 1:length(cs.phase_rec.site_fractions)
-                # TODO: there's no negative sign here, while there is one in the
-                # paper. Without flipping the sign to be positive, the chemical
-                # potentials are wrong (exactly flipped for a [0.5, 0.5] binary system)
+                # In Sundman's 2015 paper, this term is positive (Eq. 57), but
+                # with this term positive, the chemical potentials are wrong
+                # (exactly flipped for a [0.5, 0.5] binary system). I think the
+                # error is introduced when he inserts Eq. 43 into Eq. 53 and the
+                # signs are mistakenly flipped in Eq. 54. I suspect this is due
+                # to redefining the c_iG term as a negative sum in Eq. 44 after
+                # Eq. 54 and beyond had been derived. The mistake seems to be
+                # propapaged through the rest of the paper after Eq. 54.
                 total -= cs.ℵ * cs.phase_rec.mass_jac[A,state_vars_offset+_i] * c_i_G(cs.phase_rec, _i) 
                 # TODO: N_A conditions need (N_A - Ñ_A) term added
             end
