@@ -60,8 +60,9 @@ end
 
 function c_i_el(phase_record, i, el_index)
     total = 0.0
+    state_vars_offset = length(phase_record.state_variables)
     for j in 1:length(phase_record.site_fractions)
-        total += phase_record.inv_phase_matrix[i,j]*phase_record.mass_jac[el_index, j]
+        total += phase_record.inv_phase_matrix[i,j]*phase_record.mass_jac[el_index, state_vars_offset+j]
     end
     return total
 end
@@ -84,7 +85,8 @@ function get_equilibrium_matrix(compsets)
             for phase_idx in 1:P
                 compset = compsets[phase_idx]
                 num_idof = length(compset.phase_rec.site_fractions)
-                term += compset.ℵ*sum(compset.phase_rec.mass_jac[i,idof]*c_i_el(compset.phase_rec, idof, j) for idof in 1:num_idof)
+                state_vars_offset = length(compset.phase_rec.state_variables)
+                term += compset.ℵ*sum(compset.phase_rec.mass_jac[i,state_vars_offset+idof]*c_i_el(compset.phase_rec, idof, j) for idof in 1:num_idof)
             end
             eq_mat[P+i,j] = term
         end
