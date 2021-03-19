@@ -127,6 +127,32 @@ function get_equilibrium_soln(compsets)
     return soln
 end
 
+function get_subs_dict(compsets, statevar_dict)
+d = Dict(statevar_dict...)
+for compset in compsets
+    for (Y_sym, Y_num) in zip(compset.phase_rec.site_fractions, compset.Y)
+        d[Y_sym] = Y_num
+    end
+end
+return d
+end
+
+
+function solve(compsets, statevar_dict)
+    subs_dict = get_subs_dict(compsets, statevar_dict)
+    
+    A = get_equilibrium_matrix(compsets);
+    b = get_equilibrium_soln(compsets);
+    
+    AA = Symbolics.value.(substitute.(A, (subs_dict,)));
+    bb = Symbolics.value.(substitute.(b, (subs_dict,)));
+    
+    # Numeric solution
+    xx = AA \ bb;
+    return xx
+end
+
+
 
 ######################################################
 # Script
