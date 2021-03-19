@@ -71,9 +71,9 @@ function c_i_G(phase_record, i)
     total = 0.0
     state_vars_offset = length(phase_record.state_variables)
     for j in 1:length(phase_record.site_fractions)
-        total -= phase_record.inv_phase_matrix[i,j]*phase_record.grad[state_vars_offset+j]
+        total += phase_record.inv_phase_matrix[i,j]*phase_record.grad[state_vars_offset+j]
     end
-    return total
+    return -total
 end
 
 function get_equilibrium_matrix(compsets)
@@ -119,7 +119,11 @@ function get_equilibrium_soln(compsets)
             cs = compsets[ϕ]
             state_vars_offset = length(cs.phase_rec.state_variables)
             for _i in 1:length(cs.phase_rec.site_fractions)
-                total += cs.ℵ * cs.phase_rec.mass_jac[A,state_vars_offset+_i] * c_i_G(cs.phase_rec, _i)
+                # TODO: there's no negative sign here, while there is one in the
+                # paper. Without flipping the sign to be positive, the chemical
+                # potentials are wrong (exactly flipped for a [0.5, 0.5] binary system)
+                total -= cs.ℵ * cs.phase_rec.mass_jac[A,state_vars_offset+_i] * c_i_G(cs.phase_rec, _i) 
+                # TODO: N_A conditions need (N_A - Ñ_A) term added
             end
         end
         soln[P+A] = total
