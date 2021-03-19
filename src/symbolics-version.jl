@@ -172,8 +172,14 @@ prx = PhaseRecord(G_BETA, mass_BETA, state_variables, site_fractions);
 compset = CompSet(prx, [0.5, 0.5], 1.0);
 soln = solve([compset], Dict(T=>300.0))
 # TODO: chemical potentials flipped, maybe a sign error
-println("Actual chemical potentials: ", soln[1:2])
-println("Expected chemical potentials: ", [3271.04833019, 7271.04833015])
+println("Actual chemical potentials: ", soln[1:2]);
+println("Expected chemical potentials: ", [3271.04833019, 7271.04833015]);
+
+compset = CompSet(prx, [0.25, 0.75], 1.0);
+soln = solve([compset], Dict(T=>300.0))
+# TODO: chemical potentials flipped, maybe a sign error
+println("Actual chemical potentials: ", soln[1:2]);
+println("Expected chemical potentials: ", [1542.0966603, 8282.42022259]);
 
 
 
