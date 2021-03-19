@@ -154,3 +154,53 @@ substitute.(x, (subs_dict,))
 AA = Symbolics.value.(substitute.(A, (subs_dict,)))
 bb = Symbolics.value.(substitute.(b, (subs_dict,)))
 LinearAlgebra.LAPACK.gelsd!(AA, bb)
+
+############################################################
+
+# PHASE LIQUID % 1 1 !
+#  CONSTITUENT LIQUID :AL,TI,O : !
+#  PARAM G (LIQUID,AL;0) 1 -10000; 10000 N !
+#  PARAM G (LIQUID,O;0) 1 -40000; 10000 N !
+#  PARAM G (LIQUID,TI;0) 1 -20000; 10000 N !
+
+@variables LIQUID0AL LIQUID0O LIQUID0TI
+
+G_M_LIQUID = -10000*LIQUID0AL + -40000*LIQUID0O + R*T*(LIQUID0AL*log(LIQUID0AL) + LIQUID0O*log(LIQUID0O))
+mass = [LIQUID0AL, LIQUID0O]
+state_variables = [T]
+site_fractions = [LIQUID0AL, LIQUID0O]
+prx = PhaseRecord(G_M_LIQUID, mass, state_variables, site_fractions)
+compset = CompSet(prx, [0.5, 0.5], 1.0)
+
+
+############################################################
+
+
+# Super simple A-B system
+@variables Y_BETA_A Y_BETA_B T
+
+G_BETA_A = 8000.0-10.0*T;
+G_BETA_B = 12000.0-10.0*T;
+G_BETA = Y_BETA_A*G_BETA_A + Y_BETA_B*G_BETA_B + R*T*(Y_BETA_A*log(Y_BETA_A) + Y_BETA_B*log(Y_BETA_B));
+mass_BETA = [Y_BETA_A, Y_BETA_B];
+
+state_variables = [T];
+site_fractions = [Y_BETA_A, Y_BETA_B];
+
+prx = PhaseRecord(G_BETA, mass_BETA, state_variables, site_fractions);
+compset = CompSet(prx, [0.5, 0.5], 1.0);
+
+subs_dict = Dict(Dict(zip(compset.phase_rec.site_fractions, compset.Y))..., T => 300.0)
+
+A = get_equilibrium_matrix([compset]);
+b = get_equilibrium_soln([compset]);
+# Symbolic solution
+x = A \ b;
+
+# Numerical linear least squares soln
+AA = Symbolics.value.(substitute.(A, (subs_dict,)));
+bb = Symbolics.value.(substitute.(b, (subs_dict,)));
+
+LinearAlgebra.LAPACK.gelsd!(AA, bb)
+
+
