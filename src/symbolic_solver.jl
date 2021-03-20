@@ -325,6 +325,52 @@ function get_solution(phase_records, elements, conditions_keys)
     return soln
 end
 
+@doc raw"""
+    get_Delta_y_mat
+
+Notationally, Δy is a vector of length(phase_record.site_fractions) that
+updates the site fractions. However in this case, we need to plug in the
+results from the solution vector that we do not have symbolic variables for. To
+resolve that, we'll design the site fractions to be a matrix that can be used
+to take the dot product with the solution vector (padded with a prefixed one to
+handle the c_iG term). The usage is therefore
+
+# Examples
+```
+delta_y_M = get_Delta_y_mat(prx, ["A", "B"], [T, P, N_A, N_B])
+# ... compute solution
+soln = [3271.04833019, 7271.04833015, 1e-16]
+delta_y = delta_y_M * vcat(1, soln...)
+```
+
+# Equation
+```math
+\sum_i \Delta y_i^\alpha = \sum_i \left(c_{iG}^\alpha + \sum_A c_{iA}^\alpha \mu_A + \sum_\mathrm{Pot} c_{i\mathrm{Pot}}^\alpha \Delta \mathrm{Pot} \right)
+```
+"""
+function get_Delta_y_mat(phase_record, elements, conditions_keys)
+    conditions_keys = collect(conditions_keys)
+    elements = sort(elements)
+    idxs = unpack_indices(elements, [], conditions_keys)
+    fixed_free_soln_terms = Base.tail(idxs)
+    num_free_chempots = length(fixed_free_soln_terms[2])
+    num_free_pots = length(fixed_free_soln_terms[4])
+
+    Δys = Matrix{Num}(undef, length(phase_record.site_fractions), 1+num_free_chempots+num_free_pots)
+    for i in 1:length(phase_record.site_fractions)
+        Δys[i, 1] = c_iG(phase_record, i)
+        offset = 1
+        for A in 1:num_free_chempots
+            Δys[i, offset+A] = c_iA(phase_record, i, A)
+        end
+        offset += num_free_chempots
+        for pot in 1:num_free_pots
+            Δys[i, offset+pot] = c_iPot(phase_record, i, pot)
+        end
+    end
+    return Δys
+end
+
 function get_subs_dict(compsets, conditions_dict)
     d = Dict(conditions_dict...)
     for compset in compsets
