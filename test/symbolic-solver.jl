@@ -27,27 +27,24 @@ T => 300.0,
 N_A => 0.5,
 N_B => 0.5,
 )
-compset = CompSet(prx, [0.5, 0.5], 1.0);
-
-
-soln = solve([compset], condition_dict)
-# TODO: chemical potentials flipped, maybe a sign error
+compset = CompSet(prx, [0.25, 0.75], 1.0);
+sym_soln = Calphad.get_solution([compset], ["A", "B"], condition_dict)
+subs_dict = get_subs_dict([compset], condition_dict)
+soln = Symbolics.value.(substitute.(sym_soln, (subs_dict,)))
 println("Actual chemical potentials: ", soln[1:2]);
 println("Expected chemical potentials: ", [3271.04833019, 7271.04833015]);
 
 condition_dict = Dict(
-N => 1.0,
 P => 101325.0,
 T => 300.0,
 N_A => 0.25,
 N_B => 0.75,
 )
 compset = CompSet(prx, [0.25, 0.75], 1.0);
-soln = solve([compset], Dict(T=>300.0))
-# TODO: chemical potentials flipped, maybe a sign error
+subs_dict = get_subs_dict([compset], condition_dict)
+soln = Symbolics.value.(substitute.(sym_soln, (subs_dict,)))
 println("Actual chemical potentials: ", soln[1:2]);
 println("Expected chemical potentials: ", [1542.0966603, 8282.42022259]);
-
 
 
 # # Define molar Gibbs energy for (Al,Ti)2(O)3
