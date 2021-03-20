@@ -12,26 +12,24 @@ end
 
 # Super simple A-B system
 @variables Y_BETA_A Y_BETA_B
-
-@variables X_A X_B N_A N_B
-@variables N_AL N_TI N_O X_AL X_TI X_O
-
 G_BETA_A = 8000.0-10.0*T;
 G_BETA_B = 12000.0-10.0*T;
 G_BETA = Y_BETA_A*G_BETA_A + Y_BETA_B*G_BETA_B + R*T*(Y_BETA_A*log(Y_BETA_A) + Y_BETA_B*log(Y_BETA_B));
 mass_BETA = [Y_BETA_A, Y_BETA_B];
-state_variables = [T];
+state_variables = [P, T];
 site_fractions = [Y_BETA_A, Y_BETA_B];
 prx = PhaseRecord("BETA", G_BETA, mass_BETA, state_variables, site_fractions);
 
+@variables N_A N_B
 condition_dict = Dict(
-N => 1.0,
 P => 101325.0,
 T => 300.0,
 N_A => 0.5,
 N_B => 0.5,
 )
 compset = CompSet(prx, [0.5, 0.5], 1.0);
+
+
 soln = solve([compset], condition_dict)
 # TODO: chemical potentials flipped, maybe a sign error
 println("Actual chemical potentials: ", soln[1:2]);
