@@ -285,9 +285,6 @@ end
 
 
 function get_solution(phase_records, elements, conditions_keys)
-    # TODO: in principle, this should be able to take phase records, but I need
-    # to be able to symbolically get the phase amount (ℵ) for a phase record
-    # symbolically.
     conditions_keys = collect(conditions_keys)
     elements = sort(elements)
     phase_records = sort(phase_records; by = x -> x.phase_name)
