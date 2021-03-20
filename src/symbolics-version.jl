@@ -189,8 +189,8 @@ end
 # 2. free potentials
 # 3. free phase amounts
 # the right-most term in each sum is the term in the solution vector
-# \sum_B \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B + \sum_\mathrm{Pot} \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{i\mathrm{Pot}} \Delta \mathrm{Pot} + \sum_\beta \sum_\alpha M_A^\alpha \Delta \aleph^\beta  \\
-# = \sum_\alpha \sum_i - \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{iG} + \sum_{B \in (\mathrm{fixed~chempots})} \sum_\alpha \sum_i - \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B + \left( \sum_\alpha \aleph^\alpha M^\alpha_A - \tilde{N}_A \right)
+# \sum_{B_{\mathrm{free}}} \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B + \sum_\mathrm{Pot} \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{i\mathrm{Pot}} \Delta \mathrm{Pot} + \sum_\beta \sum_\alpha M_A^\alpha \Delta \aleph^\beta  \\
+# = \sum_\alpha \sum_i - \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{iG} + \sum_{B_{\mathrm{fixed}}} \sum_\alpha \sum_i - \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B + \left( \sum_\alpha \aleph^\alpha M^\alpha_A - \tilde{N}_A \right)
 """
 get_N_A_row_rhs
 
