@@ -276,6 +276,9 @@ end
 
 
 function get_solution(compsets, elements, conditions)
+    # TODO: in principle, this should be able to take phase records, but I need
+    # to be able to symbolically get the phase amount (ℵ) for a phase record
+    # symbolically.
     elements = sort(elements)
     compsets = sort(compsets; by = x -> x.phase_rec.phase_name)
     phases = [cs.phase_rec.phase_name for cs in compsets]
