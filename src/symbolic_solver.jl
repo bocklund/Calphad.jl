@@ -58,18 +58,17 @@ mass_BETA = [Y_BETA_A, Y_BETA_B];
 state_variables = [P, T];
 site_fractions = [Y_BETA_A, Y_BETA_B];
 prx = PhaseRecord("BETA", G_BETA, mass_BETA, state_variables, site_fractions);
-compset = CompSet(prx, [0.5, 0.5], 1.0);
 
-r, rrhs = get_N_A_row_rhs([compset], 1, N_A, [], [1, 2], [P, T], [], [], [1])
+r, rrhs = get_N_A_row_rhs([prx], 1, N_A, [], [1, 2], [P, T], [], [], [1])
 ```
 """
-function get_N_A_row_rhs(compsets, el_idx, N_el_sym,
+function get_N_A_row_rhs(phase_records, el_idx, N_el_sym,
                          fixed_chempot_symbols, free_chempot_idxs,
                          fixed_pot_symbols, free_pot_idxs,
                          fixed_phase_symbols, free_phase_idxs,
                          )
 
-    #compsets = [compset]
+    #phase_records = [phase_record]
     #el_idx = 1
     #N_el_sym = N_A  # symbol for the prescribed amount that will be substituted
     #fixed_chempot_symbols = []
@@ -85,8 +84,8 @@ function get_N_A_row_rhs(compsets, el_idx, N_el_sym,
     # Chemical potential columns
     for B in 1:length(free_chempot_idxs)
         total = 0.0
-        for α in 1:length(compsets)
-            prx = compsets[α].phase_rec
+        for α in 1:length(phase_records)
+            prx = phase_records[α]
             statevar_offset = length(prx.state_variables)
             for i in 1:length(prx.site_fractions)
                 total += _ℵ(prx) * prx.mass_jac[el_idx,statevar_offset+i] * c_iA(prx,i,B)
@@ -98,8 +97,8 @@ function get_N_A_row_rhs(compsets, el_idx, N_el_sym,
     col_offset = length(free_chempot_idxs)
     for pot in 1:length(free_pot_idxs)
         total = 0.0
-        for α in 1:length(compsets)
-            prx = compsets[α].phase_rec
+        for α in 1:length(phase_records)
+            prx = phase_records[α]
             statevar_offset = length(prx.state_variables)
             for i in 1:length(prx.state_variables)
                 total += _ℵ(prx) * prx.mass_jac[el_idx,statevar_offset+i] * c_iPot(prx,i,pot)
@@ -111,8 +110,8 @@ function get_N_A_row_rhs(compsets, el_idx, N_el_sym,
     col_offset += length(free_pot_idxs)
     for β in 1:length(free_phase_idxs)
         total = 0.0
-        for α in 1:length(compsets)
-            prx = compsets[α].phase_rec
+        for α in 1:length(phase_records)
+            prx = phase_records[α]
             total += prx.mass[el_idx]
         end
         row[col_offset+β] = total
@@ -120,24 +119,24 @@ function get_N_A_row_rhs(compsets, el_idx, N_el_sym,
 
     # construct the right-hand-side term
     rhs = 0.0
-    for α in 1:length(compsets)
-        prx = compsets[α].phase_rec
+    for α in 1:length(phase_records)
+        prx = phase_records[α]
         statevar_offset = length(prx.state_variables)
         for i in 1:length(prx.state_variables)
             rhs -= _ℵ(prx) * prx.mass_jac[el_idx,statevar_offset+i] * c_iG(prx, i)
         end
     end
     for B in 1:length(fixed_chempot_symbols)
-        for α in 1:length(compsets)
-            prx = compsets[α].phase_rec
+        for α in 1:length(phase_records)
+            prx = phase_records[α]
             statevar_offset = length(prx.state_variables)
             for i in 1:length(prx.state_variables)
                 rhs -= _ℵ(prx) * prx.mass_jac[el_idx,statevar_offset+i] * fixed_chempot_symbols[B]
             end
         end
     end
-    for α in 1:length(compsets)
-        prx = compsets[α].phase_rec
+    for α in 1:length(phase_records)
+        prx = phase_records[α]
         rhs += prx.mass[el_idx]
     end
     rhs -= N_el_sym
@@ -152,15 +151,15 @@ end
 
 # Examples
 ```
-srow, srhs = get_stable_phase_row_rhs([compset], 1, [], [1, 2], [P, T], [], [], [1])
+srow, srhs = get_stable_phase_row_rhs([prx], 1, [], [1, 2], [P, T], [], [], [1])
 ```
 """
-function get_stable_phase_row_rhs(compsets, phase_idx,
+function get_stable_phase_row_rhs(phase_records, phase_idx,
                                   fixed_chempot_symbols, free_chempot_idxs,
                                   fixed_pot_symbols, free_pot_idxs,
                                   fixed_phase_symbols, free_phase_idxs,
                                   )
-    phase_rec = compsets[phase_idx].phase_rec
+    phase_rec = phase_records[phase_idx]
     # Construct the row in the equilibrium matrix
     soln_size = (length(free_chempot_idxs) + length(free_pot_idxs) + length(free_phase_idxs))
     row = Array{Num}(undef, soln_size)
@@ -268,15 +267,15 @@ function unpack_indices(elements, phases, conditions)
 
 end
 
-function cond_row_rhs(cond, val, elements, phases, compsets, fixed_free_terms)
-    # assumes elements, phases, compsets are sorted
+function cond_row_rhs(cond, val, elements, phases, phase_records, fixed_free_terms)
+    # assumes elements, phases, phase_records are sorted
     str_cond = string(cond)
     if str_cond == "N"
         throw("Condition for $str_cond is not yet implemented")
     elseif startswith(str_cond, "N_")
         el = str_cond[3:end]
         el_idx = findfirst(x -> x == el, elements)
-        row, rhs = get_N_A_row_rhs(compsets, el_idx, cond, fixed_free_terms...)
+        row, rhs = get_N_A_row_rhs(phase_records, el_idx, cond, fixed_free_terms...)
     else
         throw("Condition for $str_cond is not yet implemented")
     end
@@ -285,13 +284,13 @@ function cond_row_rhs(cond, val, elements, phases, compsets, fixed_free_terms)
 end
 
 
-function get_solution(compsets, elements, conditions)
+function get_solution(phase_records, elements, conditions)
     # TODO: in principle, this should be able to take phase records, but I need
     # to be able to symbolically get the phase amount (ℵ) for a phase record
     # symbolically.
     elements = sort(elements)
-    compsets = sort(compsets; by = x -> x.phase_rec.phase_name)
-    phases = [cs.phase_rec.phase_name for cs in compsets]
+    phase_records = sort(phase_records; by = x -> x.phase_name)
+    phases = [prx.phase_name for prx in phase_records]
     idxs = unpack_indices(elements, phases, conditions)
     condition_row_symbols = first(idxs)
     fixed_free_soln_terms = Base.tail(idxs)
@@ -301,7 +300,7 @@ function get_solution(compsets, elements, conditions)
     free_pots = fixed_free_soln_terms[4]
     free_phases = fixed_free_soln_terms[6]
 
-    neqns = length(compsets) + length(condition_row_symbols)
+    neqns = length(phase_records) + length(condition_row_symbols)
     soln_size = length(free_chempots) + length(free_pots) + length(free_phases)
     @assert neqns == soln_size "The number of matrix equations ($neqns) does not match the number of solution terms ($soln_size)"
 
@@ -310,16 +309,16 @@ function get_solution(compsets, elements, conditions)
 
     # Get the equations
     # One row for each stable phase:
-    for phase_idx in 1:length(compsets)
-        row, rhs = get_stable_phase_row_rhs(compsets, phase_idx, fixed_free_soln_terms...)
+    for phase_idx in 1:length(phase_records)
+        row, rhs = get_stable_phase_row_rhs(phase_records, phase_idx, fixed_free_soln_terms...)
         A[phase_idx, :] = row
         b[phase_idx] = rhs
     end
     # One row for each condition equation
-    row_offset = length(compsets)
+    row_offset = length(phase_records)
     for cond_idx in 1:length(condition_row_symbols)
         cond = condition_row_symbols[cond_idx]
-        row, rhs = cond_row_rhs(cond, conditions[cond], elements, phases, compsets, fixed_free_soln_terms)
+        row, rhs = cond_row_rhs(cond, conditions[cond], elements, phases, phase_records, fixed_free_soln_terms)
         A[row_offset+cond_idx, :] = row
         b[row_offset+cond_idx] = rhs
     end
@@ -328,4 +327,14 @@ function get_solution(compsets, elements, conditions)
     return soln
 end
 
+function get_subs_dict(compsets, conditions_dict)
+    d = Dict(conditions_dict...)
+    for compset in compsets
+        for (Y_sym, Y_num) in zip(compset.phase_rec.site_fractions, compset.Y)
+            d[Y_sym] = Y_num
+        end
+        d[_ℵ(compset.phase_rec)] = compset.ℵ
+    end
+    return d
+end
 

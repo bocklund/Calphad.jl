@@ -1,14 +1,6 @@
 using Symbolics
-
-function get_subs_dict(compsets, conditions_dict)
-    d = Dict(conditions_dict...)
-    for compset in compsets
-        for (Y_sym, Y_num) in zip(compset.phase_rec.site_fractions, compset.Y)
-            d[Y_sym] = Y_num
-        end
-    end
-    return d
-end
+#push!(LOAD_PATH,"/Users/brandon/Projects")
+using Calphad
 
 # Super simple A-B system
 @variables Y_BETA_A Y_BETA_B
@@ -19,30 +11,21 @@ mass_BETA = [Y_BETA_A, Y_BETA_B];
 state_variables = [P, T];
 site_fractions = [Y_BETA_A, Y_BETA_B];
 prx = PhaseRecord("BETA", G_BETA, mass_BETA, state_variables, site_fractions);
+sym_soln = Calphad.get_solution([prx], ["A", "B"], condition_dict);
 
 @variables N_A N_B
-condition_dict = Dict(
-P => 101325.0,
-T => 300.0,
-N_A => 0.5,
-N_B => 0.5,
-)
+
+condition_dict = Dict(P => 101325.0,T => 300.0,N_A => 0.5,N_B => 0.5,);
 compset = CompSet(prx, [0.25, 0.75], 1.0);
-sym_soln = Calphad.get_solution([compset], ["A", "B"], condition_dict)
-subs_dict = get_subs_dict([compset], condition_dict)
-soln = Symbolics.value.(substitute.(sym_soln, (subs_dict,)))
+subs_dict = Calphad.get_subs_dict([compset], condition_dict);
+soln = Symbolics.value.(substitute.(sym_soln, (subs_dict,)));
 println("Actual chemical potentials: ", soln[1:2]);
 println("Expected chemical potentials: ", [3271.04833019, 7271.04833015]);
 
-condition_dict = Dict(
-P => 101325.0,
-T => 300.0,
-N_A => 0.25,
-N_B => 0.75,
-)
+condition_dict = Dict(P => 101325.0,T => 300.0,N_A => 0.25,N_B => 0.75,);
 compset = CompSet(prx, [0.25, 0.75], 1.0);
-subs_dict = get_subs_dict([compset], condition_dict)
-soln = Symbolics.value.(substitute.(sym_soln, (subs_dict,)))
+subs_dict = Calphad.get_subs_dict([compset], condition_dict);
+soln = Symbolics.value.(substitute.(sym_soln, (subs_dict,)));
 println("Actual chemical potentials: ", soln[1:2]);
 println("Expected chemical potentials: ", [1542.0966603, 8282.42022259]);
 
