@@ -11,9 +11,9 @@ mass_BETA = [Y_BETA_A, Y_BETA_B];
 state_variables = [P, T];
 site_fractions = [Y_BETA_A, Y_BETA_B];
 prx = PhaseRecord("BETA", G_BETA, mass_BETA, state_variables, site_fractions);
-sym_soln = Calphad.get_solution([prx], ["A", "B"], condition_dict);
-
 @variables N_A N_B
+sym_soln = Calphad.get_solution([prx], ["A", "B"], [T, P, N_A, N_B]);
+
 
 condition_dict = Dict(P => 101325.0,T => 300.0,N_A => 0.5,N_B => 0.5,);
 compset = CompSet(prx, [0.25, 0.75], 1.0);

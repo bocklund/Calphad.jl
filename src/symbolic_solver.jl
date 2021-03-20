@@ -212,7 +212,7 @@ condition_dict = Dict(
 unpack_indices(elements, phases, condition_dict)
 ```
 """
-function unpack_indices(elements, phases, conditions)
+function unpack_indices(elements, phases, conditions_keys)
     elements = sort(elements)
     phases = sort(phases)
     POTENTIALS = ("P", "T",)
@@ -225,7 +225,7 @@ function unpack_indices(elements, phases, conditions)
     fixed_phase_names = []
     condition_row_symbols = []
     # TODO: move validation outside this function
-    for cond in sort(collect(keys(conditions)); by=string)
+    for cond in sort(collect(conditions_keys); by=string)
         str_cond = string(cond)
         if startswith(str_cond, "MU_")
             el = str_cond[4:end]
@@ -267,7 +267,7 @@ function unpack_indices(elements, phases, conditions)
 
 end
 
-function cond_row_rhs(cond, val, elements, phases, phase_records, fixed_free_terms)
+function cond_row_rhs(cond, elements, phases, phase_records, fixed_free_terms)
     # assumes elements, phases, phase_records are sorted
     str_cond = string(cond)
     if str_cond == "N"
@@ -284,14 +284,15 @@ function cond_row_rhs(cond, val, elements, phases, phase_records, fixed_free_ter
 end
 
 
-function get_solution(phase_records, elements, conditions)
+function get_solution(phase_records, elements, conditions_keys)
     # TODO: in principle, this should be able to take phase records, but I need
     # to be able to symbolically get the phase amount (ℵ) for a phase record
     # symbolically.
+    conditions_keys = collect(conditions_keys)
     elements = sort(elements)
     phase_records = sort(phase_records; by = x -> x.phase_name)
     phases = [prx.phase_name for prx in phase_records]
-    idxs = unpack_indices(elements, phases, conditions)
+    idxs = unpack_indices(elements, phases, conditions_keys)
     condition_row_symbols = first(idxs)
     fixed_free_soln_terms = Base.tail(idxs)
 
@@ -318,7 +319,7 @@ function get_solution(phase_records, elements, conditions)
     row_offset = length(phase_records)
     for cond_idx in 1:length(condition_row_symbols)
         cond = condition_row_symbols[cond_idx]
-        row, rhs = cond_row_rhs(cond, conditions[cond], elements, phases, phase_records, fixed_free_soln_terms)
+        row, rhs = cond_row_rhs(cond, elements, phases, phase_records, fixed_free_soln_terms)
         A[row_offset+cond_idx, :] = row
         b[row_offset+cond_idx] = rhs
     end
