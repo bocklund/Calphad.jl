@@ -28,6 +28,11 @@ function c_iA(phase_record, i, A)
     return total
 end
 
+function _ℵ(phase_record)
+    str = "ℵ_$(phase_record.phase_name)"
+    return Num(Variable(Symbol(str)))
+end
+
 # Equation in LaTeX:
 # This longer form is more representative of how we do the sum here internally in this function
 # In this form, the left-most sum in each term on the left-hand-side corresponds
@@ -81,10 +86,10 @@ function get_N_A_row_rhs(compsets, el_idx, N_el_sym,
     for B in 1:length(free_chempot_idxs)
         total = 0.0
         for α in 1:length(compsets)
-            cs = compsets[α]
-            statevar_offset = length(cs.phase_rec.state_variables)
-            for i in 1:length(cs.phase_rec.site_fractions)
-                total += cs.ℵ * cs.phase_rec.mass_jac[el_idx,statevar_offset+i] * c_iA(cs.phase_rec,i,B)
+            prx = compsets[α].phase_rec
+            statevar_offset = length(prx.state_variables)
+            for i in 1:length(prx.site_fractions)
+                total += _ℵ(prx) * prx.mass_jac[el_idx,statevar_offset+i] * c_iA(prx,i,B)
             end
         end
         row[B] = total
@@ -94,10 +99,10 @@ function get_N_A_row_rhs(compsets, el_idx, N_el_sym,
     for pot in 1:length(free_pot_idxs)
         total = 0.0
         for α in 1:length(compsets)
-            cs = compsets[α]
-            statevar_offset = length(cs.phase_rec.state_variables)
-            for i in 1:length(cs.phase_rec.state_variables)
-                total += cs.ℵ * cs.phase_rec.mass_jac[el_idx,statevar_offset+i] * c_iPot(cs.phase_rec,i,pot)
+            prx = compsets[α].phase_rec
+            statevar_offset = length(prx.state_variables)
+            for i in 1:length(prx.state_variables)
+                total += _ℵ(prx) * prx.mass_jac[el_idx,statevar_offset+i] * c_iPot(prx,i,pot)
             end
         end
         row[col_offset+pot] = total
@@ -107,7 +112,8 @@ function get_N_A_row_rhs(compsets, el_idx, N_el_sym,
     for β in 1:length(free_phase_idxs)
         total = 0.0
         for α in 1:length(compsets)
-            total += compsets[α].phase_rec.mass[el_idx]
+            prx = compsets[α].phase_rec
+            total += prx.mass[el_idx]
         end
         row[col_offset+β] = total
     end
@@ -115,22 +121,24 @@ function get_N_A_row_rhs(compsets, el_idx, N_el_sym,
     # construct the right-hand-side term
     rhs = 0.0
     for α in 1:length(compsets)
-        cs = compsets[α]
-        statevar_offset = length(cs.phase_rec.state_variables)
-        for i in 1:length(cs.phase_rec.state_variables)
-            rhs -= cs.ℵ * cs.phase_rec.mass_jac[el_idx,statevar_offset+i] * c_iG(compsets[α].phase_rec, i)
+        prx = compsets[α].phase_rec
+        statevar_offset = length(prx.state_variables)
+        for i in 1:length(prx.state_variables)
+            rhs -= _ℵ(prx) * prx.mass_jac[el_idx,statevar_offset+i] * c_iG(prx, i)
         end
     end
     for B in 1:length(fixed_chempot_symbols)
         for α in 1:length(compsets)
-            statevar_offset = length(cs.phase_rec.state_variables)
-            for i in 1:length(cs.phase_rec.state_variables)
-                rhs -= cs.ℵ * cs.phase_rec.mass_jac[el_idx,statevar_offset+i] * fixed_chempot_symbols[B]
+            prx = compsets[α].phase_rec
+            statevar_offset = length(prx.state_variables)
+            for i in 1:length(prx.state_variables)
+                rhs -= _ℵ(prx) * prx.mass_jac[el_idx,statevar_offset+i] * fixed_chempot_symbols[B]
             end
         end
     end
     for α in 1:length(compsets)
-        rhs += compsets[α].phase_rec.mass[el_idx]
+        prx = compsets[α].phase_rec
+        rhs += prx.mass[el_idx]
     end
     rhs -= N_el_sym
 
