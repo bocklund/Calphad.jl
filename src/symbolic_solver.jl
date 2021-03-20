@@ -258,5 +258,61 @@ function unpack_indices(elements, phases, conditions)
 
 end
 
+function cond_row_rhs(cond, val, elements, phases, compsets, fixed_free_terms)
+    # assumes elements, phases, compsets are sorted
+    str_cond = string(cond)
+    if str_cond == "N"
+        throw("Condition for $str_cond is not yet implemented")
+    elseif startswith(str_cond, "N_")
+        el = str_cond[3:end]
+        el_idx = findfirst(x -> x == el, elements)
+        row, rhs = get_N_A_row_rhs(compsets, el_idx, cond, fixed_free_terms...)
+    else
+        throw("Condition for $str_cond is not yet implemented")
+    end
+
+    return row, rhs
+end
+
+
+function get_solution(compsets, elements, conditions)
+    elements = sort(elements)
+    compsets = sort(compsets; by = x -> x.phase_rec.phase_name)
+    phases = [cs.phase_rec.phase_name for cs in compsets]
+    idxs = unpack_indices(elements, phases, conditions)
+    condition_row_symbols = first(idxs)
+    fixed_free_soln_terms = Base.tail(idxs)
+
+    # construct rows and right-hand-side
+    free_chempots = fixed_free_soln_terms[2]
+    free_pots = fixed_free_soln_terms[4]
+    free_phases = fixed_free_soln_terms[6]
+
+    neqns = length(compsets) + length(condition_row_symbols)
+    soln_size = length(free_chempots) + length(free_pots) + length(free_phases)
+    @assert neqns == soln_size "The number of matrix equations ($neqns) does not match the number of solution terms ($soln_size)"
+
+    A = Matrix{Num}(undef, neqns, soln_size)
+    b = Array{Num}(undef, soln_size)
+
+    # Get the equations
+    # One row for each stable phase:
+    for phase_idx in 1:length(compsets)
+        row, rhs = get_stable_phase_row_rhs(compsets, phase_idx, fixed_free_soln_terms...)
+        A[phase_idx, :] = row
+        b[phase_idx] = rhs
+    end
+    # One row for each condition equation
+    row_offset = length(compsets)
+    for cond_idx in 1:length(condition_row_symbols)
+        cond = condition_row_symbols[cond_idx]
+        row, rhs = cond_row_rhs(cond, conditions[cond], elements, phases, compsets, fixed_free_soln_terms)
+        A[row_offset+cond_idx, :] = row
+        b[row_offset+cond_idx] = rhs
+    end
+
+    soln = A \ b
+    return soln
+end
 
 
