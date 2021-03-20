@@ -1,4 +1,5 @@
 function c_iG(phase_record, i)
+    # c^\alpha_{iG} = -\sum_j e^\alpha_{ij} \frac{\partial G^\alpha_M}{\partial y^\alpha_j}
     total = 0.0
     state_vars_offset = length(phase_record.state_variables)
     for j in 1:length(phase_record.site_fractions)
@@ -7,17 +8,18 @@ function c_iG(phase_record, i)
     return -total
 end
 
-# TODO: implement
 function c_iPot(phase_record, i, pot_idx)
+    # c^\alpha_{i\mathrm{Pot}} = -\sum_j e^\alpha_{ij} \frac{\partial^2 G^\alpha_M}{\partial \mathrm{Pot} \partial y^\alpha_j}
     total = 0.0
     state_vars_offset = length(phase_record.state_variables)
     for j in 1:length(phase_record.site_fractions)
-        total += phase_record.inv_phase_matrix[i,j]*phase_record.grad[state_vars_offset+j]
+        total += phase_record.inv_phase_matrix[i,j]*phase_record.hess[pot_idx,state_vars_offset+j]
     end
     return -total
 end
 
 function c_iA(phase_record, i, A)
+    # c^\alpha_{iA} = \sum_j e^\alpha_{ij} \frac{\partial M^\alpha_A}{\partial y^\alpha_j}
     total = 0.0
     state_vars_offset = length(phase_record.state_variables)
     for j in 1:length(phase_record.site_fractions)
