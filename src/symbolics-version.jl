@@ -3,6 +3,9 @@ using Symbolics
 
 R = 8.3145
 
+@variables N P T 
+STATE_VARS = (T, P)
+
 struct PhaseRecord
     obj
     grad
@@ -67,6 +70,16 @@ function c_i_el(phase_record, i, el_index)
     return total
 end
 
+function c_iA(phase_record, i, A)
+    total = 0.0
+    state_vars_offset = length(phase_record.state_variables)
+    for j in 1:length(phase_record.site_fractions)
+        total += phase_record.inv_phase_matrix[i,j]*phase_record.mass_jac[A, state_vars_offset+j]
+    end
+    return total
+end
+
+
 function c_i_G(phase_record, i)
     total = 0.0
     state_vars_offset = length(phase_record.state_variables)
@@ -75,6 +88,27 @@ function c_i_G(phase_record, i)
     end
     return -total
 end
+
+function c_iG(phase_record, i)
+    total = 0.0
+    state_vars_offset = length(phase_record.state_variables)
+    for j in 1:length(phase_record.site_fractions)
+        total += phase_record.inv_phase_matrix[i,j]*phase_record.grad[state_vars_offset+j]
+    end
+    return -total
+end
+
+# TODO: implement
+function c_iPot(phase_record, i, pot_idx)
+    total = 0.0
+    state_vars_offset = length(phase_record.state_variables)
+    for j in 1:length(phase_record.site_fractions)
+        total += phase_record.inv_phase_matrix[i,j]*phase_record.grad[state_vars_offset+j]
+    end
+    return -total
+end
+
+
 
 function get_equilibrium_matrix(compsets)
     N = length(compsets[1].phase_rec.mass)  # assume number of elements the same everywhere
@@ -136,8 +170,8 @@ function get_equilibrium_soln(compsets)
     return soln
 end
 
-function get_subs_dict(compsets, statevar_dict)
-d = Dict(statevar_dict...)
+function get_subs_dict(compsets, conditions_dict)
+d = Dict(conditions_dict...)
 for compset in compsets
     for (Y_sym, Y_num) in zip(compset.phase_rec.site_fractions, compset.Y)
         d[Y_sym] = Y_num
@@ -147,8 +181,77 @@ return d
 end
 
 
-function solve(compsets, statevar_dict)
-    subs_dict = get_subs_dict(compsets, statevar_dict)
+"""
+get_N_A_row_rhs
+"""
+# get_N_A_row_rhs
+# Equation in LaTeX:
+# \sum_\alpha \left[ \aleph^\alpha \sum_i \frac{\partial M_A^\alpha}{\partial y_i^\alpha} \left( \sum_B c_{iB} \mu_B + c_{iT} \Delta T + c_{iP} \Delta P \right) + M_A^\alpha \Delta \aleph^\alpha \right] = \sum_\alpha - c_{iG} + \left( N_A - \tilde{N_A} \right)
+# This longer form is more representative of how we do the sum here internally in this function
+# In this form, the left-most sum in each term on the left-hand-side corresponds
+# to one column of the solution vector i.e.:
+# 1. free chemical potentials for pure elements
+# 2. free potentials
+# 3. free phase amounts
+# the right-most term in each sum is the term in the solution vector
+# \sum_B \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B + \sum_\mathrm{Pot} \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{i\mathrm{Pot}} \Delta \mathrm{Pot} + \sum_\beta \sum_\alpha M_A^\alpha \Delta \aleph^\beta  = \sum_\alpha - c_{iG} + \left( \sum_\alpha \aleph^\alpha M^\alpha_A - \tilde{N}_A \right)
+
+compsets = [compset]
+el_idx = 1
+fixed_chempot_idxs = []
+free_chempot_idxs = [1, 2]
+fixed_pot_idxs = [1, 2]
+free_pot_idxs = []
+fixed_phase_idxs = []
+free_phase_idxs = [1]
+
+soln_size = (length(free_chempot_idxs) + length(free_pot_idxs) + length(free_phase_idxs))
+row = Array{Num}(undef, soln_size)
+# Chemical potential columns
+for B in 1:length(free_chempot_idxs)
+    total = 0.0
+    for α in 1:length(compsets)
+        cs = compsets[α]
+        statevar_offset = length(cs.phase_rec.state_variables)
+        for i in 1:length(cs.phase_rec.site_fractions)
+            total += cs.ℵ * cs.phase_rec.mass_jac[el_idx,statevar_offset+i] * c_iA(cs.phase_rec,i,B)
+        end
+    end
+    row[B] = total
+end
+# ΔPotential columns
+col_offset = length(free_chempot_idxs)
+for pot in 1:length(free_pot_idxs)
+    total = 0.0
+    for α in 1:length(compsets)
+        cs = compsets[α]
+        statevar_offset = length(cs.phase_rec.state_variables)
+        for i in 1:length(cs.phase_recstate_variables)
+            total += cs.ℵ * cs.phase_rec.mass_jac[el_idx,statevar_offset+i] * c_iPot(cs.phase_rec,i,pot)
+        end
+    end
+    row[col_offset+pot] = total
+end
+# Δℵ columns
+col_offset += length(free_pot_idxs)
+for β in 1:length(free_phase_idxs)
+    total = 0.0
+    for α in 1:length(compsets)
+        total += compsets[α].phase_rec.mass[el_idx]
+    end
+    row[col_offset+β] = total
+end
+
+
+# Condition on total number of moles, N
+# Equation in LaTeX:
+# \sum_A \sum_\alpha \left[ \aleph^\alpha \sum_i \frac{\partial M_A^\alpha}{\partial y_i^\alpha} \left( \sum_B c_{iB} \mu_B + c_{iT} \Delta T + c_{iP} \Delta P \right) + M_A^\alpha \Delta \aleph^\alpha \right] = \sum_A \sum_\alpha - c_{iG} + \left( N - \tilde{N} \right)
+
+
+
+
+function solve(compsets, conditions)
+    subs_dict = get_subs_dict(compsets, conditions)
     
     A = get_equilibrium_matrix(compsets);
     b = get_equilibrium_soln(compsets);
@@ -161,13 +264,14 @@ function solve(compsets, statevar_dict)
     return xx
 end
 
-
-
 ######################################################
 # Script
 
 # Super simple A-B system
-@variables Y_BETA_A Y_BETA_B T
+@variables Y_BETA_A Y_BETA_B
+
+@variables X_A X_B N_A N_B
+@variables N_AL N_TI N_O X_AL X_TI X_O
 
 G_BETA_A = 8000.0-10.0*T;
 G_BETA_B = 12000.0-10.0*T;
@@ -177,13 +281,26 @@ state_variables = [T];
 site_fractions = [Y_BETA_A, Y_BETA_B];
 prx = PhaseRecord(G_BETA, mass_BETA, state_variables, site_fractions);
 
-
+condition_dict = Dict(
+N => 1.0,
+P => 101325.0,
+T => 300.0,
+N_A => 0.5,
+N_B => 0.5,
+)
 compset = CompSet(prx, [0.5, 0.5], 1.0);
-soln = solve([compset], Dict(T=>300.0))
+soln = solve([compset], condition_dict)
 # TODO: chemical potentials flipped, maybe a sign error
 println("Actual chemical potentials: ", soln[1:2]);
 println("Expected chemical potentials: ", [3271.04833019, 7271.04833015]);
 
+condition_dict = Dict(
+N => 1.0,
+P => 101325.0,
+T => 300.0,
+N_A => 0.25,
+N_B => 0.75,
+)
 compset = CompSet(prx, [0.25, 0.75], 1.0);
 soln = solve([compset], Dict(T=>300.0))
 # TODO: chemical potentials flipped, maybe a sign error
@@ -252,8 +369,6 @@ substitute.(x, (subs_dict,))
 
 
 ############################################################
-
-
 
 
 
