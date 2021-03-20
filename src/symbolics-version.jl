@@ -339,6 +339,81 @@ end
 # \sum_A \sum_\alpha \left[ \aleph^\alpha \sum_i \frac{\partial M_A^\alpha}{\partial y_i^\alpha} \left( \sum_B c_{iB} \mu_B + c_{iT} \Delta T + c_{iP} \Delta P \right) + M_A^\alpha \Delta \aleph^\alpha \right] = \sum_A \sum_\alpha - c_{iG} + \left( N - \tilde{N} \right)
 
 
+"""
+
+# Examples
+```
+using Symbolics
+@variables N P T N_A MU_B NP_ALPHA N
+elements = ["A", "B", "C"]
+phases = ["ALPHA", "BETA", "GAMMA"]
+condition_dict = Dict(
+   N => 1.0,
+   P => 101325.0,
+   T => 300.0,
+   N_A => 0.5,
+   MU_B => -10000,
+   NP_ALPHA => 0.8,
+)
+unpack_indices(elements, phases, condition_dict)
+```
+"""
+function unpack_indices(elements, phases, conditions)
+    elements = sort(elements)
+    phases = sort(phases)
+    POTENTIALS = ("P", "T",)
+    
+    fixed_chempot_symbols = []
+    fixed_chempot_elements = []
+    fixed_pot_symbols = []
+    fixed_pot_strings = []
+    fixed_phase_symbols = []
+    fixed_phase_names = []
+    condition_row_symbols = []
+    # TODO: move validation outside this function
+    for cond in sort(collect(keys(conditions)); by=string)
+        str_cond = string(cond)
+        if startswith(str_cond, "MU_")
+            el = str_cond[4:end]
+            if el ∉ elements
+                throw("Element $el in condition $str_cond is not in the elements $elements")
+            end
+            push!(fixed_chempot_symbols, cond)
+            push!(fixed_chempot_elements, el)
+        elseif str_cond in POTENTIALS
+            push!(fixed_pot_symbols, cond)
+            push!(fixed_pot_strings, str_cond)
+        elseif startswith(str_cond, "NP_")
+            phase_name = str_cond[4:end]
+            if phase_name ∉ phases
+                throw("Phase $phase_name in condition $str_cond is not in the phases $phases")
+            end
+            push!(fixed_phase_symbols, cond)
+            push!(fixed_phase_names, phase_name)
+        elseif startswith(str_cond, "N_") | startswith(str_cond, "X_") | (str_cond in ("N", ))
+            # TODO: validate N_ and X_ conditions that they contain elements
+            push!(condition_row_symbols, cond)
+        else
+            throw("Unknown condition $cond")
+        end
+    end
+    
+    # The fixed conditions are all in sorted order. Now we have to determine the
+    # indices of the free conditions
+    free_chempot_idxs = [A for A in 1:length(elements) if elements[A] ∉ fixed_chempot_elements]
+    free_pot_idxs = [pot for pot in 1:length(POTENTIALS) if POTENTIALS[pot] ∉ fixed_pot_strings]
+    free_phase_idxs = [α for α in 1:length(phases) if phases[α] ∉ fixed_phase_names]
+    
+    return (
+        condition_row_symbols,
+        fixed_chempot_symbols, free_chempot_idxs,
+        fixed_pot_symbols, free_pot_idxs,
+        fixed_phase_symbols, free_phase_idxs,
+    )
+    
+end
+
+
 function solve(compsets, conditions)
     subs_dict = get_subs_dict(compsets, conditions)
     
