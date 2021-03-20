@@ -291,6 +291,49 @@ function get_N_A_row_rhs(compsets, el_idx, N_el_sym,
 end
 
 
+# LaTeX equation:
+# \sum_{B_{\mathrm{free}}} M_B^\alpha \mu_B + \sum_\mathrm{Pot} -\frac{\partial G_M^\alpha}{\partial \mathrm{Pot}} \Delta \mathrm{Pot} + \sum_\beta 0 = G_M^\alpha + \sum_{B_{\mathrm{fixed}}} -M_B^\alpha \mu_B
+"""
+
+# Examples
+```
+srow, srhs = get_stable_phase_row_rhs([compset], 1, [], [1, 2], [P, T], [], [], [1])
+```
+"""
+function get_stable_phase_row_rhs(compsets, phase_idx,
+                                  fixed_chempot_symbols, free_chempot_idxs, 
+                                  fixed_pot_symbols, free_pot_idxs,
+                                  fixed_phase_symbols, free_phase_idxs,
+                                  )
+    phase_rec = compsets[phase_idx].phase_rec
+    # Construct the row in the equilibrium matrix
+    soln_size = (length(free_chempot_idxs) + length(free_pot_idxs) + length(free_phase_idxs))
+    row = Array{Num}(undef, soln_size)
+    for B in 1:length(free_chempot_idxs)
+        row[B] = phase_rec.mass[B]
+    end
+    # ΔPotential columns
+    col_offset = length(free_chempot_idxs)
+    for pot in 1:length(free_pot_idxs)
+        row[col_offset+pot] = -phase_rec.grad[pot]
+    end
+    # Δℵ columns
+    col_offset += length(free_pot_idxs)
+    for β in 1:length(free_phase_idxs)
+        row[col_offset+β] = 0.0
+    end
+    
+    # Construct right-hand-side (RHS)
+    rhs = 0.0
+    rhs += phase_rec.obj
+    for B in 1:length(fixed_chempot_symbols)
+        rhs -= phase_rec.mass[B] * fixed_chempot_symbols[B]
+    end
+    
+    return (row, rhs)
+end
+
+
 # Condition on total number of moles, N
 # Equation in LaTeX:
 # \sum_A \sum_\alpha \left[ \aleph^\alpha \sum_i \frac{\partial M_A^\alpha}{\partial y_i^\alpha} \left( \sum_B c_{iB} \mu_B + c_{iT} \Delta T + c_{iP} \Delta P \right) + M_A^\alpha \Delta \aleph^\alpha \right] = \sum_A \sum_\alpha - c_{iG} + \left( N - \tilde{N} \right)
