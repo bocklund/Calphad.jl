@@ -113,17 +113,6 @@ function get_N_A_row_rhs(phase_records, el_idx, N_el_sym,
                          fixed_pot_symbols, free_pot_idxs,
                          fixed_phase_symbols, free_phase_idxs,
                          )
-
-    #phase_records = [phase_record]
-    #el_idx = 1
-    #N_el_sym = N_A  # symbol for the prescribed amount that will be substituted
-    #fixed_chempot_symbols = []
-    #free_chempot_idxs = [1, 2]
-    #fixed_pot_symbols = [1, 2]
-    #free_pot_idxs = []
-    #fixed_phase_symbols = []
-    #free_phase_idxs = [1]
-
     # Construct the row in the equilibrium matrix
     soln_size = (length(free_chempot_idxs) + length(free_pot_idxs) + length(free_phase_idxs))
     row = Array{Num}(undef, soln_size)
