@@ -395,6 +395,24 @@ end
 # On a simple system, using @btime on the `substitute` version took 1.4ms to
 # subs the subs_dict into the sym_soln, but calling the f_soln_sub function
 # btimes to 373 ns. HUGE for performance.
+# It should be possible to sort the conditions by
+# `sort(collect(conditions), by=x->x[1])`, which can ensure that the arguments
+# to a collable function are in the correct order. Thus, we can make an
+# intermediate function that creates callables for the sym_soln and sym_Delta_y_mats
+# and then create a new solve_and_update function can skip the substitution step
+# and just do args=map(last(sorted_subs_dict)). The sorting isn't too much more
+# expensive to do in the loop:
+# 3.295 μs: @btime subs_dict = get_subs_dict([compset], condition_dict)
+# 8.994 μs: @btime subs_dict = sort(collect(get_subs_dict([compset], condition_dict)), by=x->string(x[1]))
+# If I can avoid collecting and sort in place, it would probably reduce the
+# number of allocations (3x as much) and close the speed gap. There's also
+# probably algorithmic improvements to make so that the sorting happens outside
+# the tight solve loop (i.e. no creating subs_dict insice) and we just get the
+# non-condition terms at runtime (just site fractions and phase amounts).
+# TODO: test that phase amount updating works properly. Most I've seen so far
+# keep Δℵ close to zero (single phase, but I think phase amount should still)
+# change because the mass condition RHS shouldn't be satisfied, that is:
+# (`(N_A - Ñ_A) != 0`)
 function solve_and_update(compsets, conditions, sym_soln, sym_Delta_y_mats, num_free_phases)
     # assumes compsets and sym_Delta_y_mats are sorted in order
     subs_dict = get_subs_dict(compsets, conditions)
