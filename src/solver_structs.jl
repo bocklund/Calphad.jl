@@ -50,7 +50,7 @@ function PhaseRecord(phase_name, obj, mass, state_variables, site_fractions)
                        )
 end
 
-struct CompSet
+mutable struct CompSet
     phase_rec::PhaseRecord
     Y
     ℵ
