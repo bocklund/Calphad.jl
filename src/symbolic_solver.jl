@@ -397,15 +397,16 @@ end
 # btimes to 373 ns. HUGE for performance.
 function solve_and_update(compsets, conditions, sym_soln, sym_Delta_y_mats, num_free_phases)
     # assumes compsets and sym_Delta_y_mats are sorted in order
-    subs_dict = Calphad.get_subs_dict(compsets, conditions)
+    subs_dict = get_subs_dict(compsets, conditions)
     soln = substitute.(sym_soln, (subs_dict,))
     println("Chemical potentials: $(Symbolics.value.(soln[1:2]))")
 
     for α in 1:length(compsets)
         Δy = substitute.(sym_Delta_y_mats[α] * vcat(1, sym_soln[1:end-num_free_phases]...), (subs_dict,))
-        println("Δy($(compsets[α].phase_rec.phase_name)): $(Δy)")
+        Δℵ = soln[end-num_free_phases+α]
+        println("$(compsets[α].phase_rec.phase_name): Δy:$(Δy) Δℵ:$(Δℵ)")
         compsets[α].Y -= Δy
-        # TODO: update Δℵ for each compset based on the solution vector free phase amounts
+        compsets[α].ℵ -= Δℵ
     end
 
 end
