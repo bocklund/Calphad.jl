@@ -271,8 +271,18 @@ function cond_row_rhs(cond, elements, phases, phase_records, fixed_free_terms)
     # assumes elements, phases, phase_records are sorted
     str_cond = string(cond)
     if str_cond == "N"
-        # TODO: implement N condition row
-        throw("Condition for $str_cond is not yet implemented")
+        # TODO: lazy implementation by summing N_A here
+        rows = []
+        rhss = []
+        for el_idx in 1:length(elements)
+            row, rhs = get_N_A_row_rhs(phase_records, el_idx, cond, fixed_free_terms...)
+            push!(rows, row)
+            push!(rhss, rhs)
+        end
+        row = sum(rows)
+        rhs = sum(rhss)
+        println(size(row), row)
+        println(size(rhs), rhs)
     elseif startswith(str_cond, "N_")
         el = str_cond[3:end]
         el_idx = findfirst(x -> x == el, elements)
@@ -426,5 +436,4 @@ function solve_and_update(compsets, conditions, sym_soln, sym_Delta_y_mats, num_
         compsets[α].Y -= Δy
         compsets[α].ℵ -= Δℵ
     end
-
 end
