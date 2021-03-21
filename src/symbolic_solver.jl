@@ -385,3 +385,25 @@ function get_subs_dict(compsets, conditions_dict)
     return d
 end
 
+# TODO: if possible use the callable functions here, as below:
+# subs_dict = Calphad.get_subs_dict([compset], condition_dict)
+# condkeys = collect(keys(subs_dict))
+# convalues = map(x -> x.val, collect(values(subs_dict)))
+# f_soln_sub = eval(build_function(sym_soln, condkeys)[1]);
+# On a simple system, using @btime on the `substitute` version took 1.4ms to
+# subs the subs_dict into the sym_soln, but calling the f_soln_sub function
+# btimes to 373 ns. HUGE for performance.
+function solve_and_update(compsets, conditions, sym_soln, sym_Delta_y_mats, num_free_phases)
+    # assumes compsets and sym_Delta_y_mats are sorted in order
+    subs_dict = Calphad.get_subs_dict(compsets, conditions)
+    soln = substitute.(sym_soln, (subs_dict,))
+    println("Chemical potentials: $(Symbolics.value.(soln[1:2]))")
+
+    for α in 1:length(compsets)
+        Δy = substitute.(sym_Delta_y_mats[α] * vcat(1, sym_soln[1:end-num_free_phases]...), (subs_dict,))
+        println("Δy($(compsets[α].phase_rec.phase_name)): $(Δy)")
+        compsets[α].Y -= Δy
+        # TODO: update Δℵ for each compset based on the solution vector free phase amounts
+    end
+
+end
