@@ -271,12 +271,14 @@ function cond_row_rhs(cond, elements, phases, phase_records, fixed_free_terms)
     # assumes elements, phases, phase_records are sorted
     str_cond = string(cond)
     if str_cond == "N"
+        # TODO: implement N condition row
         throw("Condition for $str_cond is not yet implemented")
     elseif startswith(str_cond, "N_")
         el = str_cond[3:end]
         el_idx = findfirst(x -> x == el, elements)
         row, rhs = get_N_A_row_rhs(phase_records, el_idx, cond, fixed_free_terms...)
     else
+        # TODO: implement X(A) condition row
         throw("Condition for $str_cond is not yet implemented")
     end
 
