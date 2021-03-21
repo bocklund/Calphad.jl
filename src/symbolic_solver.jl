@@ -188,9 +188,90 @@ function get_stable_phase_row_rhs(phase_records, phase_idx,
 end
 
 
-# Condition on total number of moles, N
-# Equation in LaTeX:
-# \sum_A \sum_\alpha \left[ \aleph^\alpha \sum_i \frac{\partial M_A^\alpha}{\partial y_i^\alpha} \left( \sum_B c_{iB} \mu_B + c_{iT} \Delta T + c_{iP} \Delta P \right) + M_A^\alpha \Delta \aleph^\alpha \right] = \sum_A \sum_\alpha - c_{iG} + \left( N - \tilde{N} \right)
+"""
+    get_N_row_rhs
+
+See the function `get_N_A_row_rhs`. This is conceptually the same as an N_A
+condition with an inner loop over all the elements in each column.
+"""function get_N_row_rhs(phase_records, N_sym,
+                         fixed_chempot_symbols, free_chempot_idxs,
+                         fixed_pot_symbols, free_pot_idxs,
+                         fixed_phase_symbols, free_phase_idxs,
+                         )
+    # Construct the row in the equilibrium matrix
+    soln_size = (length(free_chempot_idxs) + length(free_pot_idxs) + length(free_phase_idxs))
+    N_elements = length(phase_records[1].mass)  # assume mass length is the same for every phase record
+    row = Array{Num}(undef, soln_size)
+    # Chemical potential columns
+    for B in 1:length(free_chempot_idxs)
+        total = 0.0
+        for A in 1:N_elements
+            for α in 1:length(phase_records)
+                prx = phase_records[α]
+                statevar_offset = length(prx.state_variables)
+                for i in 1:length(prx.site_fractions)
+                    total += _ℵ(prx) * prx.mass_jac[A,statevar_offset+i] * c_iA(prx,i,B)
+                end
+            end
+        end
+        row[B] = total
+    end
+    # ΔPotential columns
+    col_offset = length(free_chempot_idxs)
+    for pot in 1:length(free_pot_idxs)
+        total = 0.0
+        for A in 1:N_elements
+            for α in 1:length(phase_records)
+                prx = phase_records[α]
+                statevar_offset = length(prx.state_variables)
+                for i in 1:length(prx.state_variables)
+                    total += _ℵ(prx) * prx.mass_jac[A,statevar_offset+i] * c_iPot(prx,i,pot)
+                end
+            end
+        end
+        row[col_offset+pot] = total
+    end
+    # Δℵ columns
+    col_offset += length(free_pot_idxs)
+    for β in 1:length(free_phase_idxs)
+        total = 0.0
+        for A in 1:N_elements
+            for α in 1:length(phase_records)
+                prx = phase_records[α]
+                total += prx.mass[A]
+            end
+        end
+        row[col_offset+β] = total
+    end
+
+    # construct the right-hand-side term
+    rhs = 0.0
+    for A in 1:N_elements
+        for α in 1:length(phase_records)
+            prx = phase_records[α]
+            statevar_offset = length(prx.state_variables)
+            for i in 1:length(prx.state_variables)
+                rhs -= _ℵ(prx) * prx.mass_jac[A,statevar_offset+i] * c_iG(prx, i)
+            end
+        end
+        for B in 1:length(fixed_chempot_symbols)
+            for α in 1:length(phase_records)
+                prx = phase_records[α]
+                statevar_offset = length(prx.state_variables)
+                for i in 1:length(prx.state_variables)
+                    rhs -= _ℵ(prx) * prx.mass_jac[A,statevar_offset+i] * fixed_chempot_symbols[B]
+                end
+            end
+        end
+        for α in 1:length(phase_records)
+            prx = phase_records[α]
+            rhs += prx.mass[A]
+        end
+    end
+    rhs -= N_sym
+
+    return (row, rhs)
+end
 
 
 """
@@ -271,18 +352,7 @@ function cond_row_rhs(cond, elements, phases, phase_records, fixed_free_terms)
     # assumes elements, phases, phase_records are sorted
     str_cond = string(cond)
     if str_cond == "N"
-        # TODO: lazy implementation by summing N_A here
-        rows = []
-        rhss = []
-        for el_idx in 1:length(elements)
-            row, rhs = get_N_A_row_rhs(phase_records, el_idx, cond, fixed_free_terms...)
-            push!(rows, row)
-            push!(rhss, rhs)
-        end
-        row = sum(rows)
-        rhs = sum(rhss)
-        println(size(row), row)
-        println(size(rhs), rhs)
+        row, rhs = get_N_row_rhs(phase_records, cond, fixed_free_terms...)
     elseif startswith(str_cond, "N_")
         el = str_cond[3:end]
         el_idx = findfirst(x -> x == el, elements)
