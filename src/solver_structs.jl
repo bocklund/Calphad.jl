@@ -24,7 +24,6 @@ function phase_matrix(hess, num_potentials, num_site_fractions, sublattice_dof)
     subl_offset = 0
     for s in 1:length(sublattice_dof)
         # The first columns until the offset are zero
-        println("row $(s+num_site_fractions), 1:$subl_offset = 0, $(subl_offset+1):$(subl_offset+sublattice_dof[s]) = 1, $(subl_offset+sublattice_dof[s]+1):end = 0")
         phase_mat[num_site_fractions+s,1:subl_offset] .= 0.0
         # rows in symmetric column
         phase_mat[1:subl_offset,num_site_fractions+s] .= 0.0
@@ -39,7 +38,6 @@ function phase_matrix(hess, num_potentials, num_site_fractions, sublattice_dof)
         phase_mat[subl_offset+sublattice_dof[s]+1:end,num_site_fractions+s] .= 0.0
         subl_offset += sublattice_dof[s]
     end
-    println(phase_mat)
     return phase_mat
 end
 
