@@ -372,12 +372,15 @@ function get_Delta_y_mat(phase_record, elements, conditions_keys)
 end
 
 function get_subs_dict(compsets, conditions_dict)
-    d = Dict(conditions_dict...)
+    d = Dict{Num, Num}()
     for compset in compsets
         for (Y_sym, Y_num) in zip(compset.phase_rec.site_fractions, compset.Y)
-            d[Y_sym] = Y_num
+            d[Y_sym] = Num(Y_num)
         end
         d[_ℵ(compset.phase_rec)] = compset.ℵ
+    end
+    for cond in keys(conditions_dict)
+        d[cond] = conditions_dict[cond]
     end
     return d
 end
