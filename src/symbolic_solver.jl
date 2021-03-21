@@ -193,11 +193,12 @@ end
 
 See the function `get_N_A_row_rhs`. This is conceptually the same as an N_A
 condition with an inner loop over all the elements in each column.
-"""function get_N_row_rhs(phase_records, N_sym,
-                         fixed_chempot_symbols, free_chempot_idxs,
-                         fixed_pot_symbols, free_pot_idxs,
-                         fixed_phase_symbols, free_phase_idxs,
-                         )
+"""
+function get_N_row_rhs(phase_records, N_sym,
+                       fixed_chempot_symbols, free_chempot_idxs,
+                       fixed_pot_symbols, free_pot_idxs,
+                       fixed_phase_symbols, free_phase_idxs,
+                       )
     # Construct the row in the equilibrium matrix
     soln_size = (length(free_chempot_idxs) + length(free_pot_idxs) + length(free_phase_idxs))
     N_elements = length(phase_records[1].mass)  # assume mass length is the same for every phase record
