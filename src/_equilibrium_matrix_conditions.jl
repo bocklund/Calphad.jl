@@ -11,6 +11,11 @@
 # Note that the right-most term in each sum is the term in the solution vector,
 # i.e. μ_B, ΔPot, Δℵ
 
+# TODO: all the row methods could use some simplification in the arguments to
+# not depend on the fixed/free amounts that are not relevant. It would also be
+# nice to make sure they work regardless of whether the inputs are symbolic or
+# numeric.
+
 function c_iG(phase_record, i)
     # c^\alpha_{iG} = -\sum_j e^\alpha_{ij} \frac{\partial G^\alpha_M}{\partial y^\alpha_j}
     total = 0.0
