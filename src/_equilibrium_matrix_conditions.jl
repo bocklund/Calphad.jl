@@ -156,12 +156,7 @@ function get_N_A_row_rhs(phase_records, el_idx, N_el_sym,
     # Δℵ columns
     col_offset += length(free_pot_idxs)
     for β in 1:length(free_phase_idxs)
-        total = 0.0
-        for α in 1:length(phase_records)
-            prx = phase_records[α]
-            total += prx.mass[el_idx]
-        end
-        row[col_offset+β] = total
+        row[col_offset+β] = phase_records[β].mass[el_idx]
     end
 
     # construct the right-hand-side term
@@ -249,10 +244,7 @@ function get_N_row_rhs(phase_records, N_sym,
     for β in 1:length(free_phase_idxs)
         total = 0.0
         for A in 1:N_elements
-            for α in 1:length(phase_records)
-                prx = phase_records[α]
-                total += prx.mass[A]
-            end
+            total += phase_records[β].mass[A]
         end
         row[col_offset+β] = total
     end
