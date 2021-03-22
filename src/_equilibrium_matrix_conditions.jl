@@ -337,19 +337,19 @@ condition with an inner loop over all the elements in each column.
 ```
 
 """
-function get_N_row_rhs(phase_records, N_sym,
+function get_N_row_rhs(phase_records, N_prescribed,
                        fixed_chempot_symbols, free_chempot_idxs,
                        fixed_pot_symbols, free_pot_idxs,
                        fixed_phase_symbols, free_phase_idxs,
                        )
     # Construct the row in the equilibrium matrix
     soln_size = (length(free_chempot_idxs) + length(free_pot_idxs) + length(free_phase_idxs))
-    N_elements = length(phase_records[1].mass)  # assume mass length is the same for every phase record
+    num_elements = length(phase_records[1].mass)  # assume mass length is the same for every phase record
     row = Array{Num}(undef, soln_size)
     # Chemical potential columns
     for B in 1:length(free_chempot_idxs)
         total = 0.0
-        for A in 1:N_elements
+        for A in 1:num_elements
             for α in 1:length(phase_records)
                 prx = phase_records[α]
                 statevar_offset = length(prx.state_variables)
@@ -364,7 +364,7 @@ function get_N_row_rhs(phase_records, N_sym,
     col_offset = length(free_chempot_idxs)
     for pot in 1:length(free_pot_idxs)
         total = 0.0
-        for A in 1:N_elements
+        for A in 1:num_elements
             for α in 1:length(phase_records)
                 prx = phase_records[α]
                 statevar_offset = length(prx.state_variables)
@@ -379,7 +379,7 @@ function get_N_row_rhs(phase_records, N_sym,
     col_offset += length(free_pot_idxs)
     for β in 1:length(free_phase_idxs)
         total = 0.0
-        for A in 1:N_elements
+        for A in 1:num_elements
             total += phase_records[β].mass[A]
         end
         row[col_offset+β] = total
@@ -387,7 +387,8 @@ function get_N_row_rhs(phase_records, N_sym,
 
     # construct the right-hand-side term
     rhs = 0.0
-    for A in 1:N_elements
+    for A in 1:num_elements
+        # C_iG terms
         for α in 1:length(phase_records)
             prx = phase_records[α]
             statevar_offset = length(prx.state_variables)
@@ -395,6 +396,7 @@ function get_N_row_rhs(phase_records, N_sym,
                 rhs -= _ℵ(prx) * prx.mass_jac[A,statevar_offset+i] * c_iG(prx, i)
             end
         end
+        # Fixed chemical potential terms
         for B in 1:length(fixed_chempot_symbols)
             for α in 1:length(phase_records)
                 prx = phase_records[α]
@@ -404,12 +406,14 @@ function get_N_row_rhs(phase_records, N_sym,
                 end
             end
         end
+        # System total N
         for α in 1:length(phase_records)
             prx = phase_records[α]
-            rhs += prx.mass[A]
+            rhs += _ℵ(prx) * prx.mass[A]
         end
     end
-    rhs -= N_sym
+    # Prescribed N
+    rhs -= N_prescribed
 
     return (row, rhs)
 end
