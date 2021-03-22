@@ -1,5 +1,16 @@
 # Included by symbolic_solver.jl
 
+# In this module are methods to compute rows of the equilibrium matrix.
+# Each row method has it's equation documented in LaTeX. The more expanded
+# notation is designed to better represent the way the code is written. In this
+# form, the left-most sum index in each term on the left-hand-side corresponds
+# to one column of the solution vector, i.e.:
+# 1. free chemical potentials for pure elements
+# 2. free potentials
+# 3. free phase amounts
+# Note that the right-most term in each sum is the term in the solution vector,
+# i.e. μ_B, ΔPot, Δℵ
+
 function c_iG(phase_record, i)
     # c^\alpha_{iG} = -\sum_j e^\alpha_{ij} \frac{\partial G^\alpha_M}{\partial y^\alpha_j}
     total = 0.0
@@ -36,13 +47,17 @@ function _ℵ(phase_record)
     return Num(Variable(Symbol(str)))
 end
 
-# LaTeX equation:
-# \sum_{B_{\mathrm{free}}} M_B^\alpha \mu_B + \sum_\mathrm{Pot} -\frac{\partial G_M^\alpha}{\partial \mathrm{Pot}} \Delta \mathrm{Pot} + \sum_\beta 0 = G_M^\alpha + \sum_{B_{\mathrm{fixed}}} -M_B^\alpha \mu_B
-"""
+@doc raw"""
 
 # Examples
 ```
 srow, srhs = get_stable_phase_row_rhs([prx], 1, [], [1, 2], [P, T], [], [], [1])
+```
+
+# Equation
+
+```math
+\sum_{B_{\mathrm{free}}} M_B^\alpha \mu_B + \sum_\mathrm{Pot} -\frac{\partial G_M^\alpha}{\partial \mathrm{Pot}} \Delta \mathrm{Pot} + \sum_\beta 0 = G_M^\alpha + \sum_{B_{\mathrm{fixed}}} -M_B^\alpha \mu_B
 ```
 """
 function get_stable_phase_row_rhs(phase_records, phase_idx,
@@ -79,17 +94,7 @@ function get_stable_phase_row_rhs(phase_records, phase_idx,
 end
 
 
-# Equation in LaTeX:
-# This longer form is more representative of how we do the sum here internally in this function
-# In this form, the left-most sum in each term on the left-hand-side corresponds
-# to one column of the solution vector i.e.:
-# 1. free chemical potentials for pure elements
-# 2. free potentials
-# 3. free phase amounts
-# the right-most term in each sum is the term in the solution vector
-# \sum_{B_{\mathrm{free}}} \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B + \sum_\mathrm{Pot} \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{i\mathrm{Pot}} \Delta \mathrm{Pot} + \sum_\beta \sum_\alpha M_A^\alpha \Delta \aleph^\beta  \\
-# = \sum_\alpha \sum_i - \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{iG} + \sum_{B_{\mathrm{fixed}}} \sum_\alpha \sum_i - \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B + \left( \sum_\alpha \aleph^\alpha M^\alpha_A - \tilde{N}_A \right)
-"""
+@doc raw"""
 get_N_A_row_rhs
 
 # Examples
@@ -107,6 +112,13 @@ prx = PhaseRecord("BETA", G_BETA, mass_BETA, state_variables, site_fractions);
 
 r, rrhs = get_N_A_row_rhs([prx], 1, N_A, [], [1, 2], [P, T], [], [], [1])
 ```
+
+# Equation
+```math
+\sum_{B_{\mathrm{free}}} \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B + \sum_\mathrm{Pot} \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{i\mathrm{Pot}} \Delta \mathrm{Pot} + \sum_\beta M_A^\beta \Delta \aleph^\beta  \\
+= - \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{iG} - \sum_{B_{\mathrm{fixed}}} \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B + \left( \sum_\alpha \aleph^\alpha M^\alpha_A - \tilde{N}_A \right)
+```
+
 """
 function get_N_A_row_rhs(phase_records, el_idx, N_el_sym,
                          fixed_chempot_symbols, free_chempot_idxs,
@@ -179,11 +191,20 @@ function get_N_A_row_rhs(phase_records, el_idx, N_el_sym,
     return (row, rhs)
 end
 
-"""
+@doc raw"""
     get_N_row_rhs
 
 See the function `get_N_A_row_rhs`. This is conceptually the same as an N_A
 condition with an inner loop over all the elements in each column.
+
+# Equation
+```math
+\sum_{B_{\mathrm{free}}} \sum_A \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B
++ \sum_\mathrm{Pot} \sum_A \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{i\mathrm{Pot}} \Delta \mathrm{Pot}
++ \sum_\beta \sum_A M_A^\beta \Delta \aleph^\beta  \\
+= \sum_A \left(- \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{iG} - \sum_{B_{\mathrm{fixed}}} \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B + \sum_\alpha \aleph^\alpha M^\alpha_A \right) - \tilde{N}
+```
+
 """
 function get_N_row_rhs(phase_records, N_sym,
                        fixed_chempot_symbols, free_chempot_idxs,
