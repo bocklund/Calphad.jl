@@ -76,7 +76,7 @@ function unpack_indices(elements, phases, conditions_keys)
 
 end
 
-function get_solution(phase_records, elements, conditions_keys)
+function get_solution_parts(phase_records, elements, conditions_keys)
     conditions_keys = collect(conditions_keys)
     elements = sort(elements)
     phase_records = sort(phase_records; by = x -> x.phase_name)
@@ -113,9 +113,15 @@ function get_solution(phase_records, elements, conditions_keys)
         b[row_offset+cond_idx] = rhs
     end
 
+    return A, b
+end
+
+function get_solution(phase_records, elements, conditions_keys)
+    A, b = get_solution_parts(phase_records, elements, conditions_keys)
     soln = A \ b
     return soln
 end
+
 
 @doc raw"""
     get_Delta_y_mat
