@@ -23,7 +23,6 @@ unpack_indices(elements, phases, condition_dict)
 """
 function unpack_indices(elements, phases, conditions_keys)
     elements = sort(elements)
-    phases = sort(phases)
     POTENTIALS = ("P", "T",)
 
     fixed_chempot_symbols = []
@@ -34,7 +33,7 @@ function unpack_indices(elements, phases, conditions_keys)
     fixed_phase_names = []
     condition_row_symbols = []
     # TODO: move validation outside this function
-    for cond in sort(collect(conditions_keys); by=string)
+    for cond in conditions_keys
         str_cond = string(cond)
         if startswith(str_cond, "MU_")
             el = str_cond[4:end]
@@ -79,7 +78,6 @@ end
 function get_solution_parts(phase_records, elements, conditions_keys)
     conditions_keys = collect(conditions_keys)
     elements = sort(elements)
-    phase_records = sort(phase_records; by = x -> x.phase_name)
     phases = [prx.phase_name for prx in phase_records]
     idxs = unpack_indices(elements, phases, conditions_keys)
     condition_row_symbols = first(idxs)
