@@ -191,9 +191,6 @@ function get_N_A_row_rhs(phase_records, el_idx, N_el_sym,
     return (row, rhs)
 end
 
-# TODO: update the equation to match what the code does. For `c_iX` terms, there
-# is no sum over the internal components. This matches pycalphad, but it's not
-# clear why yet.
 @doc raw"""
     get_x_A_row_rhs
 
@@ -249,7 +246,9 @@ function get_x_A_row_rhs(phase_records, el_idx, x_A_prescribed,
             for i in 1:length(prx.site_fractions)
                 factor = _ℵ(prx) * c_iA(prx,i,B) / N
                 inner_total = prx.mass_jac[el_idx,statevar_offset+i]
-                inner_total -= x_A * prx.mass_jac[el_idx,statevar_offset+i]
+                for C in 1:num_elements
+                    inner_total -= x_A * prx.mass_jac[C,statevar_offset+i]
+                end
                 total += factor * inner_total
             end
         end
@@ -265,7 +264,9 @@ function get_x_A_row_rhs(phase_records, el_idx, x_A_prescribed,
             for i in 1:length(prx.state_variables)
                 factor = _ℵ(prx) * c_iPot(prx,i,pot) / N
                 inner_total = prx.mass_jac[el_idx,statevar_offset+i]
-                inner_total -= x_A * prx.mass_jac[el_idx,statevar_offset+i]
+                for C in 1:num_elements
+                    inner_total -= x_A * prx.mass_jac[C,statevar_offset+i]
+                end
                 total += factor * inner_total
             end
         end
@@ -292,7 +293,9 @@ function get_x_A_row_rhs(phase_records, el_idx, x_A_prescribed,
         for i in 1:length(prx.state_variables)
             factor = _ℵ(prx) * c_iG(prx, i) / N
             inner_total = prx.mass_jac[el_idx,statevar_offset+i]
-            inner_total -= x_A * prx.mass_jac[el_idx,statevar_offset+i]
+            for C in 1:num_elements
+                inner_total -= x_A * prx.mass_jac[C,statevar_offset+i]
+            end
             rhs -= factor * inner_total
         end
     end
@@ -304,7 +307,9 @@ function get_x_A_row_rhs(phase_records, el_idx, x_A_prescribed,
             for i in 1:length(prx.state_variables)
                 factor = _ℵ(prx) * c_iA(prx, i, B) / N
                 inner_total = prx.mass_jac[el_idx,statevar_offset+i]
-                inner_total -= x_A * prx.mass_jac[el_idx,statevar_offset+i]
+                for C in 1:num_elements
+                    inner_total -= x_A * prx.mass_jac[C,statevar_offset+i]
+                end
                 rhs -= factor * inner_total
             end
         end
