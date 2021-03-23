@@ -234,6 +234,7 @@ function get_x_A_row_rhs(phase_records, el_idx, x_A_prescribed,
     end
     x_A = N_A / N
 
+    # TODO: conditions other than chemical potential
     # Construct the row in the equilibrium matrix
     soln_size = (length(free_chempot_idxs) + length(free_pot_idxs) + length(free_phase_idxs))
     row = Array{Num}(undef, soln_size)
