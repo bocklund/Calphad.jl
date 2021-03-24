@@ -3,14 +3,13 @@ using Symbolics, Calphad, Test
 let # Single phase test
 elements = ["A", "B"];
 
-# Define Gibbs energy and phase record for BETA
-@variables Y_BETA_A Y_BETA_B
-G_BETA_A = 8000.0-10.0*T;
-G_BETA_B = 12000.0-10.0*T;
-G_BETA = Y_BETA_A*G_BETA_A + Y_BETA_B*G_BETA_B + R*T*(Y_BETA_A*log(Y_BETA_A) + Y_BETA_B*log(Y_BETA_B));
-mass_BETA = [Y_BETA_A, Y_BETA_B];
-prx_BETA = PhaseRecord("BETA", G_BETA, mass_BETA, [P, T], [Y_BETA_A, Y_BETA_B], [2]);
-phase_records = [prx_BETA];
+# Define Gibbs energy and phase record for ALPHA
+# ALPHA is an ideal solution
+@variables Y_ALPHA_A Y_ALPHA_B
+G_ALPHA = R*T*(Y_ALPHA_A*log(Y_ALPHA_A) + Y_ALPHA_B*log(Y_ALPHA_B));
+mass_ALPHA = [Y_ALPHA_A, Y_ALPHA_B];
+prx_ALPHA = PhaseRecord("ALPHA", G_ALPHA, mass_ALPHA, [P, T], [Y_ALPHA_A, Y_ALPHA_B], [2]);
+phase_records = [prx_ALPHA];
 
 # Condition variables
 @variables X_B  N
@@ -22,8 +21,8 @@ sym_soln = Calphad.get_solution(phase_records, elements, cond_keys);
 sym_Delta_y_mats = Calphad.get_Delta_y_mat.(phase_records, (elements,), (cond_keys,));
 
 # Construct a composition set close to the solution
-compset_BETA = Calphad.CompSet(prx_BETA, [0.51, 0.49], 1.0)
-compsets = [compset_BETA];
+compset_ALPHA = Calphad.CompSet(prx_ALPHA, [0.51, 0.49], 1.0)
+compsets = [compset_ALPHA];
 
 # Solve with printing
 println(condition_dict)
