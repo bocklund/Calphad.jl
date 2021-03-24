@@ -27,8 +27,12 @@ compsets = [compset_ALPHA];
 # Solve with printing
 println(condition_dict)
 println(compsets)
-Calphad.solve_and_update(compsets, condition_dict, sym_soln, sym_Delta_y_mats, length(compsets); step_size=0.01, doprint=true)
+# For an ideal solution, Newton's method step should be exact, so we take a full size step.
+Calphad.solve_and_update(compsets, condition_dict, sym_soln, sym_Delta_y_mats, length(compsets); step_size=1.0, doprint=true)
 println(compsets)
+@test all(compset_ALPHA.Y .≈ [0.5, 0.5])
+@test compset_ALPHA.ℵ ≈ 1.0
+
 
 end
 
@@ -73,6 +77,10 @@ println(condition_dict)
 println(compsets)
 Calphad.solve_and_update(compsets, condition_dict, sym_soln, sym_Delta_y_mats, length(compsets); step_size=0.01, doprint=true)
 println(compsets)
-
+# pycalphad solution for step_size = 0.01
+@test all(compset_BETA.Y .≈ [0.5591255569183224, 0.4408744430816775])
+@test compset_BETA.ℵ ≈ 0.4999626227785548
+@test all(compset_ALPHA.Y .≈ [0.4402585398297285, 0.5597414601702715])
+@test compset_ALPHA.ℵ ≈ 0.5000373772214453
 
 end
