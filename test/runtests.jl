@@ -1,6 +1,4 @@
 using Calphad
 using Test
 
-@testset "Calphad.jl" begin
-    # Write your tests here.
-end
+@testset "Solver Test" begin include("solver.jl") end
