@@ -120,12 +120,8 @@ r, rrhs = get_N_A_row_rhs([prx], 1, N_A, [], [1, 2], [P, T], [], [], [1])
 
 # Equation
 ```math
-\sum_{B_{\mathrm{free}}} \sum_{\alpha_{\mathrm{free}}} \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B
-+ \sum_\mathrm{Pot} \sum_{\alpha_{\mathrm{free}}} \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{i\mathrm{Pot}} \Delta \mathrm{Pot}
-+ \sum_{\alpha_{\mathrm{free}}} M_A^\alpha \Delta \aleph^\alpha  \\
-= - \sum_{\alpha_{\mathrm{free}}} \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{iG}
-- \sum_{B_{\mathrm{fixed}}} \sum_{\alpha_{\mathrm{free}}} \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B
-+ \left( \tilde{N}_A - \sum_\alpha \aleph^\alpha M^\alpha_A \right)
+\sum_{B_{\mathrm{free}}} \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B + \sum_\mathrm{Pot} \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{i\mathrm{Pot}} \Delta \mathrm{Pot} + \sum_\beta M_A^\beta \Delta \aleph^\beta  \\
+= - \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{iG} - \sum_{B_{\mathrm{fixed}}} \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B + \left( \tilde{N}_A - \sum_\alpha \aleph^\alpha M^\alpha_A \right)
 ```
 
 """
@@ -140,7 +136,7 @@ function get_N_A_row_rhs(phase_records, el_idx, N_A_prescribed,
     # Chemical potential columns
     for B in 1:length(free_chempot_idxs)
         total = 0.0
-        for α in free_phase_idxs
+        for α in 1:length(phase_records)
             prx = phase_records[α]
             statevar_offset = length(prx.state_variables)
             for i in 1:length(prx.site_fractions)
@@ -153,11 +149,11 @@ function get_N_A_row_rhs(phase_records, el_idx, N_A_prescribed,
     col_offset = length(free_chempot_idxs)
     for pot in 1:length(free_pot_idxs)
         total = 0.0
-        for α in free_phase_idxs
+        for α in 1:length(phase_records)
             prx = phase_records[α]
             statevar_offset = length(prx.state_variables)
             for i in 1:length(prx.state_variables)
-                total += prx.ℵ * prx.mass_jac[el_idx,statevar_offset+i] * c_iPot(prx,i,free_pot_idxs[pot])
+                total += prx.ℵ * prx.mass_jac[el_idx,statevar_offset+i] * c_iPot(prx,i,pot)
             end
         end
         row[col_offset+pot] = total
@@ -165,13 +161,13 @@ function get_N_A_row_rhs(phase_records, el_idx, N_A_prescribed,
     # Δℵ columns
     col_offset += length(free_pot_idxs)
     for β in 1:length(free_phase_idxs)
-        row[col_offset+β] = phase_records[free_phase_idxs[β]].mass[el_idx]
+        row[col_offset+β] = phase_records[β].mass[el_idx]
     end
 
     # construct the right-hand-side term
     rhs = 0.0
     # C_iG terms
-    for α in free_phase_idxs
+    for α in 1:length(phase_records)
         prx = phase_records[α]
         statevar_offset = length(prx.state_variables)
         for i in 1:length(prx.state_variables)
@@ -180,7 +176,7 @@ function get_N_A_row_rhs(phase_records, el_idx, N_A_prescribed,
     end
     # Fixed chemical potentials
     for B in 1:length(fixed_chempot_symbols)
-        for α in free_phase_idxs
+        for α in 1:length(phase_records)
             prx = phase_records[α]
             statevar_offset = length(prx.state_variables)
             for i in 1:length(prx.state_variables)
@@ -207,21 +203,19 @@ See the function `get_N_A_row_rhs`. This is the corresponding mole fraction cond
 # Equation
 
 ```math
-\begin{aligned}
 % Free chemical potential columns (μ_B)
-\sum_{B_{\mathrm{free}}} \sum_{\alpha_{\mathrm{free}}} \sum_i \frac{\aleph^\alpha c_{iB}}{N} \left( \frac{\partial M_A^\alpha}{\partial y_i^\alpha} - x_A \sum_C \frac{\partial M_C^\alpha}{\partial y_i^\alpha} \right)  \mu_B & \\
+\sum_{B_{\mathrm{free}}} \sum_\alpha \sum_i \frac{\aleph^\alpha c_{iB}}{N} \left( \frac{\partial M_A^\alpha}{\partial y_i^\alpha} - x_A \sum_C \frac{\partial M_C^\alpha}{\partial y_i^\alpha} \right)  \mu_B & \\
 % Free potential columns (ΔP)
-+ \sum_\mathrm{Pot} \sum_{\alpha_{\mathrm{free}}} \sum_i \frac{\aleph^\alpha c_{i\mathrm{Pot}}}{N} \left( \frac{\partial M_A^\alpha}{\partial y_i^\alpha} - x_A \sum_C \frac{\partial M_C^\alpha}{\partial y_i^\alpha} \right)  \Delta \mathrm{Pot} & \\
++ \sum_\mathrm{Pot} \sum_\alpha \sum_i \frac{\aleph^\alpha c_{i\mathrm{Pot}}}{N} \left( \frac{\partial M_A^\alpha}{\partial y_i^\alpha} - x_A \sum_C \frac{\partial M_C^\alpha}{\partial y_i^\alpha} \right)  \Delta \mathrm{Pot} & \\
 % Free phase amount columns (Δℵ)
-+ \sum_{\alpha_{\mathrm{free}}} \frac{1}{N} \left( M_A^\alpha - x_A \sum_C M_C^\alpha \right) \Delta \aleph^\alpha &
++ \sum_{\beta_\mathrm{free}} \frac{1}{N} \left( M_A^\beta - x_A \sum_C M_C^\beta \right) \Delta \aleph^\beta &
 % Right-hand side (constant)
 % c_iG
-= - \sum_{\alpha_{\mathrm{free}}} \sum_i \frac{\aleph^\alpha c_{iG}}{N} \left( \frac{\partial M_A^\alpha}{\partial y_i^\alpha} - x_A \sum_C \frac{\partial M_C^\alpha}{\partial y_i^\alpha} \right) \\
+= - \sum_\alpha \sum_i \frac{\aleph^\alpha c_{iG}}{N} \left( \frac{\partial M_A^\alpha}{\partial y_i^\alpha} - x_A \sum_C \frac{\partial M_C^\alpha}{\partial y_i^\alpha} \right) \\
 % Fixed chemical potentials
-& - \sum_{B_{\mathrm{fixed}}} \sum_{\alpha_{\mathrm{free}}} \sum_i \frac{\aleph^\alpha c_{iB}}{N} \left( \frac{\partial M_A^\alpha}{\partial y_i^\alpha} - x_A \sum_C \frac{\partial M_C^\alpha}{\partial y_i^\alpha} \right)  \mu_B \\
+& - \sum_{B_{\mathrm{fixed}}} \sum_\alpha \sum_i \frac{\aleph^\alpha c_{iB}}{N} \left( \frac{\partial M_A^\alpha}{\partial y_i^\alpha} - x_A \sum_C \frac{\partial M_C^\alpha}{\partial y_i^\alpha} \right)  \mu_B \\
 % The term for the condition
-& + \left( \tilde{x}_A - x_A \right)
-\end{aligned}
+& + \left( \tilde{x}_A - x_A \right) \\
 ```
 """
 function get_x_A_row_rhs(phase_records, el_idx, x_A_prescribed,
@@ -251,7 +245,7 @@ function get_x_A_row_rhs(phase_records, el_idx, x_A_prescribed,
     # Chemical potential columns
     for B in 1:length(free_chempot_idxs)
         total = 0.0
-        for α in free_phase_idxs
+        for α in 1:length(phase_records)
             prx = phase_records[α]
             statevar_offset = length(prx.state_variables)
             for i in 1:length(prx.site_fractions)
@@ -269,11 +263,11 @@ function get_x_A_row_rhs(phase_records, el_idx, x_A_prescribed,
     col_offset = length(free_chempot_idxs)
     for pot in 1:length(free_pot_idxs)
         total = 0.0
-        for α in free_phase_idxs
+        for α in 1:length(phase_records)
             prx = phase_records[α]
             statevar_offset = length(prx.state_variables)
             for i in 1:length(prx.state_variables)
-                factor = prx.ℵ * c_iPot(prx,i,free_pot_idxs[pot]) / N
+                factor = prx.ℵ * c_iPot(prx,i,pot) / N
                 inner_total = prx.mass_jac[el_idx,statevar_offset+i]
                 for C in 1:num_elements
                     inner_total -= x_A * prx.mass_jac[C,statevar_offset+i]
@@ -286,7 +280,7 @@ function get_x_A_row_rhs(phase_records, el_idx, x_A_prescribed,
     # Δℵ columns
     col_offset += length(free_pot_idxs)
     for β in 1:length(free_phase_idxs)
-        prx = phase_records[free_phase_idxs[β]]
+        prx = phase_records[β]
         factor = 1 / N
         inner_total = prx.mass[el_idx]
         for C in 1:num_elements
@@ -298,7 +292,7 @@ function get_x_A_row_rhs(phase_records, el_idx, x_A_prescribed,
     # construct the right-hand-side term
     rhs = 0.0
     # c_iG terms
-    for α in free_phase_idxs
+    for α in 1:length(phase_records)
         prx = phase_records[α]
         statevar_offset = length(prx.state_variables)
         for i in 1:length(prx.state_variables)
@@ -312,7 +306,7 @@ function get_x_A_row_rhs(phase_records, el_idx, x_A_prescribed,
     end
     # Fixed chemical potentials
     for B in 1:length(fixed_chempot_symbols)
-        for α in free_phase_idxs
+        for α in 1:length(phase_records)
             prx = phase_records[α]
             statevar_offset = length(prx.state_variables)
             for i in 1:length(prx.state_variables)
@@ -340,13 +334,10 @@ condition with an inner loop over all the elements in each column.
 
 # Equation
 ```math
-\sum_{B_{\mathrm{free}}} \sum_A \sum_{\alpha_{\mathrm{free}}} \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B
-+ \sum_\mathrm{Pot} \sum_A \sum_{\alpha_{\mathrm{free}}} \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{i\mathrm{Pot}} \Delta \mathrm{Pot}
-+ \sum_{\alpha_{\mathrm{free}}} \sum_A M_A^\alpha \Delta \aleph^\alpha  \\
-= \sum_A \left(
-- \sum_{\alpha_{\mathrm{free}}} \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{iG}
-- \sum_{B_{\mathrm{fixed}}} \sum_{\alpha_{\mathrm{free}}} \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B + \right)
-+ (\tilde{N} - N)
+\sum_{B_{\mathrm{free}}} \sum_A \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B
++ \sum_\mathrm{Pot} \sum_A \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{i\mathrm{Pot}} \Delta \mathrm{Pot}
++ \sum_\beta \sum_A M_A^\beta \Delta \aleph^\beta  \\
+= \sum_A \left(- \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{iG} - \sum_{B_{\mathrm{fixed}}} \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B + \right) + (\tilde{N} - N)
 ```
 
 """
@@ -363,7 +354,7 @@ function get_N_row_rhs(phase_records, N_prescribed,
     for B in 1:length(free_chempot_idxs)
         total = 0.0
         for A in 1:num_elements
-            for α in free_phase_idxs
+            for α in 1:length(phase_records)
                 prx = phase_records[α]
                 statevar_offset = length(prx.state_variables)
                 for i in 1:length(prx.site_fractions)
@@ -378,11 +369,11 @@ function get_N_row_rhs(phase_records, N_prescribed,
     for pot in 1:length(free_pot_idxs)
         total = 0.0
         for A in 1:num_elements
-            for α in free_phase_idxs
+            for α in 1:length(phase_records)
                 prx = phase_records[α]
                 statevar_offset = length(prx.state_variables)
                 for i in 1:length(prx.state_variables)
-                    total += prx.ℵ * prx.mass_jac[A,statevar_offset+i] * c_iPot(prx,i,free_pot_idxs[pot])
+                    total += prx.ℵ * prx.mass_jac[A,statevar_offset+i] * c_iPot(prx,i,pot)
                 end
             end
         end
@@ -393,7 +384,7 @@ function get_N_row_rhs(phase_records, N_prescribed,
     for β in 1:length(free_phase_idxs)
         total = 0.0
         for A in 1:num_elements
-            total += phase_records[free_phase_idxs[β]].mass[A]
+            total += phase_records[β].mass[A]
         end
         row[col_offset+β] = total
     end
@@ -402,7 +393,7 @@ function get_N_row_rhs(phase_records, N_prescribed,
     rhs = 0.0
     for A in 1:num_elements
         # C_iG terms
-        for α in free_phase_idxs
+        for α in 1:length(phase_records)
             prx = phase_records[α]
             statevar_offset = length(prx.state_variables)
             for i in 1:length(prx.state_variables)
@@ -411,7 +402,7 @@ function get_N_row_rhs(phase_records, N_prescribed,
         end
         # Fixed chemical potential terms
         for B in 1:length(fixed_chempot_symbols)
-            for α in free_phase_idxs
+            for α in 1:length(phase_records)
                 prx = phase_records[α]
                 statevar_offset = length(prx.state_variables)
                 for i in 1:length(prx.state_variables)
