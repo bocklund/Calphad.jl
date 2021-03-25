@@ -78,7 +78,7 @@ function get_stable_phase_row_rhs(phase_records, phase_idx,
     # ΔPotential columns
     col_offset = length(free_chempot_idxs)
     for pot in 1:length(free_pot_idxs)
-        row[col_offset+pot] = -phase_rec.grad[pot]
+        row[col_offset+pot] = -phase_rec.grad[free_pot_idxs[pot]]
     end
     # Δℵ columns
     col_offset += length(free_pot_idxs)
@@ -153,7 +153,7 @@ function get_N_A_row_rhs(phase_records, el_idx, N_A_prescribed,
             prx = phase_records[α]
             statevar_offset = length(prx.state_variables)
             for i in 1:length(prx.state_variables)
-                total += prx.ℵ * prx.mass_jac[el_idx,statevar_offset+i] * c_iPot(prx,i,pot)
+                total += prx.ℵ * prx.mass_jac[el_idx,statevar_offset+i] * c_iPot(prx,i,free_pot_idxs[pot])
             end
         end
         row[col_offset+pot] = total
@@ -267,7 +267,7 @@ function get_x_A_row_rhs(phase_records, el_idx, x_A_prescribed,
             prx = phase_records[α]
             statevar_offset = length(prx.state_variables)
             for i in 1:length(prx.state_variables)
-                factor = prx.ℵ * c_iPot(prx,i,pot) / N
+                factor = prx.ℵ * c_iPot(prx,i,free_pot_idxs[pot]) / N
                 inner_total = prx.mass_jac[el_idx,statevar_offset+i]
                 for C in 1:num_elements
                     inner_total -= x_A * prx.mass_jac[C,statevar_offset+i]
@@ -373,7 +373,7 @@ function get_N_row_rhs(phase_records, N_prescribed,
                 prx = phase_records[α]
                 statevar_offset = length(prx.state_variables)
                 for i in 1:length(prx.state_variables)
-                    total += prx.ℵ * prx.mass_jac[A,statevar_offset+i] * c_iPot(prx,i,pot)
+                    total += prx.ℵ * prx.mass_jac[A,statevar_offset+i] * c_iPot(prx,i,free_pot_idxs[pot])
                 end
             end
         end
