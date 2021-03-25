@@ -16,6 +16,10 @@
 # nice to make sure they work regardless of whether the inputs are symbolic or
 # numeric.
 
+# TODO: The residual terms for N, N_A, and X(B) subtract the current value from the
+# prescribed value. It's not clear to me mathematically why this is, but it is easy to
+# verify for an ideal system that is not mass balanced that this should be the case.
+
 function c_iG(phase_record, i)
     # c^\alpha_{iG} = -\sum_j e^\alpha_{ij} \frac{\partial G^\alpha_M}{\partial y^\alpha_j}
     total = 0.0
@@ -84,7 +88,9 @@ function get_stable_phase_row_rhs(phase_records, phase_idx,
 
     # Construct right-hand-side (RHS)
     rhs = 0.0
+    # Gibbs energy
     rhs += phase_rec.obj
+    # Fixed chemical potentials
     for B in 1:length(fixed_chempot_symbols)
         rhs -= phase_rec.mass[B] * fixed_chempot_symbols[B]
     end
@@ -115,11 +121,11 @@ r, rrhs = get_N_A_row_rhs([prx], 1, N_A, [], [1, 2], [P, T], [], [], [1])
 # Equation
 ```math
 \sum_{B_{\mathrm{free}}} \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B + \sum_\mathrm{Pot} \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{i\mathrm{Pot}} \Delta \mathrm{Pot} + \sum_\beta M_A^\beta \Delta \aleph^\beta  \\
-= - \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{iG} - \sum_{B_{\mathrm{fixed}}} \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B + \left( \sum_\alpha \aleph^\alpha M^\alpha_A - \tilde{N}_A \right)
+= - \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{iG} - \sum_{B_{\mathrm{fixed}}} \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B + \left( \tilde{N}_A - \sum_\alpha \aleph^\alpha M^\alpha_A \right)
 ```
 
 """
-function get_N_A_row_rhs(phase_records, el_idx, N_el_sym,
+function get_N_A_row_rhs(phase_records, el_idx, N_A_prescribed,
                          fixed_chempot_symbols, free_chempot_idxs,
                          fixed_pot_symbols, free_pot_idxs,
                          fixed_phase_symbols, free_phase_idxs,
@@ -160,6 +166,7 @@ function get_N_A_row_rhs(phase_records, el_idx, N_el_sym,
 
     # construct the right-hand-side term
     rhs = 0.0
+    # C_iG terms
     for α in 1:length(phase_records)
         prx = phase_records[α]
         statevar_offset = length(prx.state_variables)
@@ -167,6 +174,7 @@ function get_N_A_row_rhs(phase_records, el_idx, N_el_sym,
             rhs -= prx.ℵ * prx.mass_jac[el_idx,statevar_offset+i] * c_iG(prx, i)
         end
     end
+    # Fixed chemical potentials
     for B in 1:length(fixed_chempot_symbols)
         for α in 1:length(phase_records)
             prx = phase_records[α]
@@ -176,11 +184,13 @@ function get_N_A_row_rhs(phase_records, el_idx, N_el_sym,
             end
         end
     end
+    # Prescribed N_A
+    rhs += N_A_prescribed
+    # System current N_A
     for α in 1:length(phase_records)
         prx = phase_records[α]
-        rhs += prx.mass[el_idx]
+        rhs -= prx.mass[el_idx]
     end
-    rhs -= N_el_sym
 
     return (row, rhs)
 end
@@ -205,7 +215,7 @@ See the function `get_N_A_row_rhs`. This is the corresponding mole fraction cond
 % Fixed chemical potentials
 & - \sum_{B_{\mathrm{fixed}}} \sum_\alpha \sum_i \frac{\aleph^\alpha c_{iB}}{N} \left( \frac{\partial M_A^\alpha}{\partial y_i^\alpha} - x_A \sum_C \frac{\partial M_C^\alpha}{\partial y_i^\alpha} \right)  \mu_B \\
 % The term for the condition
-& + \left( x_A - \tilde{x}_A \right) \\
+& + \left( \tilde{x}_A - x_A \right) \\
 ```
 """
 function get_x_A_row_rhs(phase_records, el_idx, x_A_prescribed,
@@ -310,8 +320,8 @@ function get_x_A_row_rhs(phase_records, el_idx, x_A_prescribed,
         end
     end
     # Prescribed amount
-    rhs += x_A
-    rhs -= x_A_prescribed
+    rhs += x_A_prescribed
+    rhs -= x_A
 
     return (row, rhs)
 end
@@ -327,7 +337,7 @@ condition with an inner loop over all the elements in each column.
 \sum_{B_{\mathrm{free}}} \sum_A \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B
 + \sum_\mathrm{Pot} \sum_A \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{i\mathrm{Pot}} \Delta \mathrm{Pot}
 + \sum_\beta \sum_A M_A^\beta \Delta \aleph^\beta  \\
-= \sum_A \left(- \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{iG} - \sum_{B_{\mathrm{fixed}}} \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B + \sum_\alpha \aleph^\alpha M^\alpha_A \right) - \tilde{N}
+= \sum_A \left(- \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha} c_{iG} - \sum_{B_{\mathrm{fixed}}} \sum_\alpha \sum_i \aleph^\alpha \frac{\partial M_A^\alpha}{\partial y_i^\alpha}  c_{iB} \mu_B + \right) + (\tilde{N} - N)
 ```
 
 """
@@ -400,14 +410,16 @@ function get_N_row_rhs(phase_records, N_prescribed,
                 end
             end
         end
-        # System total N
-        for α in 1:length(phase_records)
-            prx = phase_records[α]
-            rhs += prx.ℵ * prx.mass[A]
-        end
     end
     # Prescribed N
-    rhs -= N_prescribed
+    rhs += N_prescribed
+    # Current system total N
+    for A in 1:num_elements
+        for α in 1:length(phase_records)
+            prx = phase_records[α]
+            rhs -= prx.ℵ * prx.mass[A]
+        end
+    end
 
     return (row, rhs)
 end

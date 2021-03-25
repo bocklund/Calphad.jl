@@ -1,6 +1,7 @@
 using Symbolics, Calphad, Test
 
 let # Single phase test
+# This case demonstrates the need to have the mass residual be negative.
 elements = ["A", "B"];
 
 # Define Gibbs energy and phase record for ALPHA
@@ -32,7 +33,6 @@ Calphad.solve_and_update(compsets, condition_dict, sym_soln, sym_Delta_y_mats, l
 println(compsets)
 @test all(compset_ALPHA.Y .≈ [0.5, 0.5])
 @test compset_ALPHA.ℵ ≈ 1.0
-
 
 end
 
