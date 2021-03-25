@@ -21,7 +21,7 @@ condition_dict = Dict(
 unpack_indices(elements, phases, condition_dict)
 ```
 """
-function unpack_indices(elements, phases, conditions_keys)
+function unpack_indices(elements, phases, conditions_keys; validate_phases=false)
     elements = sort(elements)
     POTENTIALS = ("P", "T",)
 
@@ -45,10 +45,13 @@ function unpack_indices(elements, phases, conditions_keys)
         elseif str_cond in POTENTIALS
             push!(fixed_pot_symbols, cond)
             push!(fixed_pot_strings, str_cond)
-        elseif startswith(str_cond, "NP_")
-            phase_name = str_cond[4:end]
-            if phase_name ∉ phases
-                throw("Phase $phase_name in condition $str_cond is not in the phases $phases")
+        elseif startswith(str_cond, "ℵ_")
+            phase_name = str_cond[5:end]  # TODO: not sure why it needs to be 5
+            # handle case if unpack_indices is used for a single phase Δy
+            if validate_phases
+                if phase_name ∉ phases
+                    throw("Phase $phase_name in condition $str_cond is not in the phases $phases")
+                end
             end
             push!(fixed_phase_symbols, cond)
             push!(fixed_phase_names, phase_name)
@@ -147,7 +150,7 @@ delta_y = delta_y_M * vcat(1, soln...)
 function get_Delta_y_mat(phase_record, elements, conditions_keys)
     conditions_keys = collect(conditions_keys)
     elements = sort(elements)
-    idxs = unpack_indices(elements, [], conditions_keys)
+    idxs = unpack_indices(elements, [phase_record.phase_name], conditions_keys; validate_phases=false)
     fixed_free_soln_terms = Base.tail(idxs)
     num_free_chempots = length(fixed_free_soln_terms[2])
     num_free_pots = length(fixed_free_soln_terms[4])
@@ -207,22 +210,44 @@ end
 # keep Δℵ close to zero (single phase, but I think phase amount should still)
 # change because the mass condition RHS shouldn't be satisfied, that is:
 # (`(N_A - Ñ_A) != 0`)
-function solve_and_update(compsets, conditions, sym_soln, sym_Delta_y_mats, num_free_phases; step_size=1.0, doprint=false)
+function solve_and_update(compsets, conditions, sym_soln, sym_Delta_y_mats, free_phase_idxs, free_pot_guess; step_size=1.0, doprint=false)
+    num_free_phases = length(free_phase_idxs)
     # assumes compsets and sym_Delta_y_mats are sorted in order
-    subs_dict = get_subs_dict(compsets, conditions)
-    soln = substitute.(sym_soln, (subs_dict,))
-    if doprint
-        # println("Chemical potentials: $(Symbolics.value.(soln[1:2]))")
-        println("equilibrium_soln: $(Symbolics.value.(soln))")
+    free_pot_dict = Dict()
+    for (ky, (idx, val)) in free_pot_guess
+        free_pot_dict[ky] = val
     end
+    subs_dict = get_subs_dict(compsets, Dict(conditions..., free_pot_dict...))
+    soln = Symbolics.value.(substitute.(sym_soln, (subs_dict,)))
+    # Extract chemical potentials
+    num_free_chempots = length(soln) - num_free_phases - length(free_pot_guess)
+    chempots = soln[1:num_free_chempots]
+    if doprint
+        println("equilibrium_soln: $soln")
+    end
+    # Update ΔPot
+    sorted_free_pots = sort(collect(free_pot_guess); by = x -> x[1][1])
+    for i in 1:length(sorted_free_pots)
+        ΔPot = soln[num_free_chempots+i]
+        ky, (idx, val) = sorted_free_pots[i]
+        free_pot_guess[ky] = (idx, val + ΔPot)
+    end
+    # Update Δℵ
+    for β in 1:num_free_phases
+        α = free_phase_idxs[β]
+        Δℵ = soln[end-num_free_phases+β]
+        if doprint
+            println("$(compsets[α].phase_rec.phase_name): Δℵ=$(Δℵ)")
+        end
+        compsets[α].ℵ = min(max(compsets[α].ℵ+Δℵ, 0.0), 1.0)
+    end
+    # Update Δy
     for α in 1:length(compsets)
         Δy = Symbolics.value.(substitute.(sym_Delta_y_mats[α] * vcat(1, sym_soln[1:end-num_free_phases]...), (subs_dict,)))
-        Δℵ = Symbolics.value(soln[end-num_free_phases+α])
         if doprint
-            println("$(compsets[α].phase_rec.phase_name): Δy=$(Δy) (step size=$step_size) Δℵ=$(Δℵ)")
+            println("$(compsets[α].phase_rec.phase_name): Δy=$(Δy) (step size=$step_size)")
         end
         compsets[α].Y += step_size*Δy
-        compsets[α].ℵ = min(max(compsets[α].ℵ+Δℵ, 0.0), 1.0)
-
     end
+    return chempots
 end
