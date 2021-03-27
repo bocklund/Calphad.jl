@@ -200,58 +200,44 @@ function vectorize_values(compsets::Vector{CompSet}, free_potentials::OrderedDic
 end
 
 function build_callable(expr, inputs)
+    # The function at index 1 is a callable with a return, the second one is for in-place modification
     f = eval(build_function(expr, inputs)[1])
     return f
 end
 
+function build_delta_y_callables(delta_y_matrices::Vector{Matrix{Num}}, soln::Vector{Num}, inp::Vector{Num}, num_free_phases::Int)
+    soln_potentials = vcat([1], soln[1:end-num_free_phases])
+    funcs = Vector{Function}(undef, length(delta_y_matrices))
+    for i in 1:length(delta_y_matrices)
+        delta_y_expr = delta_y_matrices[i] * soln_potentials
+        # The function at index 1 is a callable with a return, the second one is for in-place modification
+        funcs[i] = build_callable(delta_y_expr, inp)
+    end
+    return funcs
+end
 
-# TODO: if possible use the callable functions here, as below:
-# subs_dict = Calphad.get_subs_dict([compset], condition_dict)
-# condkeys = collect(keys(subs_dict))
-# convalues = map(x -> x.val, collect(values(subs_dict)))
-# f_soln_sub = eval(build_function(sym_soln, condkeys)[1]);
-# On a simple system, using @btime on the `substitute` version took 1.4ms to
-# subs the subs_dict into the sym_soln, but calling the f_soln_sub function
-# btimes to 373 ns. HUGE for performance.
-# It should be possible to sort the conditions by
-# `sort(collect(conditions), by=x->x[1])`, which can ensure that the arguments
-# to a collable function are in the correct order. Thus, we can make an
-# intermediate function that creates callables for the sym_soln and sym_Delta_y_mats
-# and then create a new solve_and_update function can skip the substitution step
-# and just do args=map(last(sorted_subs_dict)). The sorting isn't too much more
-# expensive to do in the loop:
-# 3.295 μs: @btime subs_dict = get_subs_dict([compset], condition_dict)
-# 8.994 μs: @btime subs_dict = sort(collect(get_subs_dict([compset], condition_dict)), by=x->string(x[1]))
-# If I can avoid collecting and sort in place, it would probably reduce the
-# number of allocations (3x as much) and close the speed gap. There's also
-# probably algorithmic improvements to make so that the sorting happens outside
-# the tight solve loop (i.e. no creating subs_dict insice) and we just get the
-# non-condition terms at runtime (just site fractions and phase amounts).
 # TODO: test that phase amount updating works properly. Most I've seen so far
 # keep Δℵ close to zero (single phase, but I think phase amount should still)
 # change because the mass condition RHS shouldn't be satisfied, that is:
 # (`(N_A - Ñ_A) != 0`)
-function solve_and_update(compsets, conditions, sym_soln, sym_Delta_y_mats, free_phase_idxs, free_pot_guess; step_size=1.0, doprint=false)
+function solve_and_update(compsets::Vector{CompSet}, free_potentials::OrderedDict{Num,Float64}, conditions::OrderedDict{Num,Float64}, soln_func::Function, delta_y_funcs::Vector{Function}, free_phase_idxs::Vector{Int}; step_size=1.0, doprint=false)
     num_free_phases = length(free_phase_idxs)
-    # assumes compsets and sym_Delta_y_mats are sorted in order
-    free_pot_dict = Dict()
-    for (ky, (idx, val)) in free_pot_guess
-        free_pot_dict[ky] = val
+    x = vectorize_values(compsets, free_potentials, conditions)
+    if doprint
+        println(x)
     end
-    subs_dict = get_subs_dict(compsets, Dict(conditions..., free_pot_dict...))
-    soln = Symbolics.value.(substitute.(sym_soln, (subs_dict,)))
+    soln = soln_func(x)
     # Extract chemical potentials
-    num_free_chempots = length(soln) - num_free_phases - length(free_pot_guess)
+    num_free_chempots = length(soln) - num_free_phases - length(free_potentials)
     chempots = soln[1:num_free_chempots]
     if doprint
-        println("equilibrium_soln: $soln")
+        println("equilibrium_soln: ", soln)
     end
     # Update ΔPot
-    sorted_free_pots = sort(collect(free_pot_guess); by = x -> x[1][1])
-    for i in 1:length(sorted_free_pots)
-        ΔPot = soln[num_free_chempots+i]
-        ky, (idx, val) = sorted_free_pots[i]
-        free_pot_guess[ky] = (idx, val + ΔPot)
+    # TODO: assumes free potentials are in the same order as the potentials in the solution vector, is there a way to enforce this structurally without incurring overhead time?
+    for (i, (ky, val)) in enumerate(free_potentials)
+        # offset for number of free chemical potentials
+        free_potentials[ky] = val + soln[num_free_chempots+i]
     end
     # Update Δℵ
     for β in 1:num_free_phases
@@ -260,11 +246,11 @@ function solve_and_update(compsets, conditions, sym_soln, sym_Delta_y_mats, free
         if doprint
             println("$(compsets[α].phase_rec.phase_name): Δℵ=$(Δℵ)")
         end
-        compsets[α].ℵ = min(max(compsets[α].ℵ+Δℵ, 0.0), 1.0)
+        compsets[α].ℵ = max(compsets[α].ℵ+Δℵ, 0.0)
     end
     # Update Δy
     for α in 1:length(compsets)
-        Δy = Symbolics.value.(substitute.(sym_Delta_y_mats[α] * vcat(1, sym_soln[1:end-num_free_phases]...), (subs_dict,)))
+        Δy = delta_y_funcs[α](x)
         if doprint
             println("$(compsets[α].phase_rec.phase_name): Δy=$(Δy) (step size=$step_size)")
         end
