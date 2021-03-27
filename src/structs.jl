@@ -1,15 +1,15 @@
 struct PhaseRecord
-    phase_name
-    obj
-    grad
-    hess
-    mass
-    mass_jac
-    state_variables
-    site_fractions
-    phase_matrix
-    inv_phase_matrix
-    ℵ
+    phase_name::String
+    obj::Num
+    grad::Vector{Num}
+    hess::Matrix{Num}
+    mass::Vector{Num}
+    mass_jac::Matrix{Num}
+    state_variables::Vector{Num}
+    site_fractions::Vector{Num}
+    phase_matrix::Matrix{Num}
+    inv_phase_matrix::Matrix{Num}
+    ℵ::Num
 end
 
 function phase_matrix(hess, num_potentials, num_site_fractions, sublattice_dof)
@@ -66,8 +66,8 @@ end
 
 mutable struct CompSet
     phase_rec::PhaseRecord
-    Y
-    ℵ
+    Y::Vector{Float64}
+    ℵ::Float64
 end
 
 function Base.show(io::IO, composition_set::CompSet)
