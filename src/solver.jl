@@ -184,6 +184,27 @@ function get_subs_dict(compsets, conditions_dict)
     return d
 end
 
+function isphasecond(cond::Num)
+    str_cond = string(cond)
+    return startswith(str_cond, "ℵ_")
+end
+
+function vectorize_inputs(compsets::Vector{CompSet}, free_potentials::OrderedDict{Num,Float64}, conditions::OrderedDict{Num,Float64})
+    compset_conds = [vcat(cs.phase_rec.site_fractions, [cs.phase_rec.ℵ]) for cs in compsets]
+    return vcat(collect(keys(free_potentials)), [ky for ky in keys(conditions) if !isphasecond(ky)], compset_conds...)
+end
+
+function vectorize_values(compsets::Vector{CompSet}, free_potentials::OrderedDict{Num,Float64}, conditions::OrderedDict{Num,Float64})
+    compset_conds = [vcat(cs.Y, [cs.ℵ]) for cs in compsets]
+    return vcat(collect(values(free_potentials)), [val for (ky, val) in conditions if !isphasecond(ky)], compset_conds...)
+end
+
+function build_callable(expr, inputs)
+    f = eval(build_function(expr, inputs)[1])
+    return f
+end
+
+
 # TODO: if possible use the callable functions here, as below:
 # subs_dict = Calphad.get_subs_dict([compset], condition_dict)
 # condkeys = collect(keys(subs_dict))
