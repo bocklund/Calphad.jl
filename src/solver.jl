@@ -209,6 +209,27 @@ end
 # keep Δℵ close to zero (single phase, but I think phase amount should still)
 # change because the mass condition RHS shouldn't be satisfied, that is:
 # (`(N_A - Ñ_A) != 0`)
+function update(compsets::Vector{CompSet}, x::Vector{Float64}, soln::Vector{Float64}, delta_y_funcs::Vector{Function}, free_phase_idxs::Vector{Int}; step_size=1.0, verbose=false)
+    num_free_phases = length(free_phase_idxs)
+    # Update Δℵ
+    for β in 1:num_free_phases
+        α = free_phase_idxs[β]
+        Δℵ = soln[end-num_free_phases+β]
+        if verbose
+            println("$(compsets[α].phase_record.phase_name): Δℵ=$(Δℵ)")
+        end
+        # Prevent the phase amount from going negative
+        compsets[α].ℵ = max(compsets[α].ℵ+Δℵ, 0.0)
+    end
+    # Update Δy
+    for α in 1:length(compsets)
+        Δy = delta_y_funcs[α](x)
+        if verbose
+            println("$(compsets[α].phase_record.phase_name): Δy=$(Δy) (step size=$step_size)")
+        end
+        compsets[α].Y += step_size*Δy
+    end
+end
 function solve_and_update(compsets::Vector{CompSet}, free_potentials::OrderedDict{Num,Float64}, conditions::OrderedDict{Num,Float64}, soln_func::Function, delta_y_funcs::Vector{Function}, free_phase_idxs::Vector{Int}; step_size=1.0, verbose=false)
     num_free_phases = length(free_phase_idxs)
     x = vectorize_values(compsets, free_potentials, conditions)
