@@ -186,8 +186,11 @@ function vectorize_values(compsets::Vector{CompSet}, free_potentials::OrderedDic
 end
 
 function build_callable(expr, inputs)
-    # The function at index 1 is a callable with a return, the second one is for in-place modification
-    f = eval(build_function(expr, inputs)[1])
+    # The function at index 1 is a callable with a return, the second one is
+    # for in-place modification.
+    # `expression=Val{false}` compiles the function instead of returning it,
+    # avoiding "world age" issues from using eval.
+    f = build_function(expr, inputs, expression=Val{false})[1]
     return f
 end
 
