@@ -17,7 +17,7 @@ phase_records = [prx_ALPHA];
 conditions = OrderedDict{Num, Float64}(P => 101325.0, T=>300.0, X_B=>0.5, N=>1.0)
 
 # Construct a composition set close to the solution
-compset_ALPHA = Calphad.CompSet(prx_ALPHA, [0.51, 0.49], 1.0)
+compset_ALPHA = CompSet(prx_ALPHA, [0.51, 0.49], 1.0)
 compsets = [compset_ALPHA];
 free_phase_idxs = [1]
 
@@ -72,8 +72,8 @@ phase_records = [prx_BETA, prx_ALPHA];
 conditions = OrderedDict{Num, Float64}(P => 101325.0, T=>1000.0, X_B=>0.5, N=>1.0)
 
 # Composition sets
-compset_BETA = Calphad.CompSet(prx_BETA, [0.55911824, 0.44088176], 0.502617267178723)
-compset_ALPHA = Calphad.CompSet(prx_ALPHA, [0.44025959, 0.55974041], 0.49738273282127704)
+compset_BETA = CompSet(prx_BETA, [0.55911824, 0.44088176], 0.502617267178723)
+compset_ALPHA = CompSet(prx_ALPHA, [0.44025959, 0.55974041], 0.49738273282127704)
 compsets = [compset_BETA, compset_ALPHA]
 free_phase_idxs = [1, 2]
 
@@ -82,7 +82,7 @@ free_pots = OrderedDict{Num, Float64}()  # initial guess
 println(conditions)
 println(compsets)
 # Only take one step because we are trying to confirm the solution
-Calphad.find_solution(elements, compsets, free_pots, conditions, free_phase_idxs; max_iters=1, verbose=true)
+find_solution(elements, compsets, free_pots, conditions, free_phase_idxs; max_iters=1, verbose=true)
 println(compsets)
 # pycalphad solution for step_size = 0.01
 @test all(compset_BETA.Y .≈ [0.5591255569183224, 0.4408744430816775])
@@ -92,7 +92,7 @@ println(compsets)
 
 # Now we minimize
 println(compsets)
-Calphad.find_solution(elements, compsets, free_pots, conditions, free_phase_idxs; max_iters=10000, verbose=false)
+find_solution(elements, compsets, free_pots, conditions, free_phase_idxs; max_iters=10000, verbose=false)
 println(compsets)
 # pycalphad verified solution
 @test all(compset_BETA.Y .≈ [0.55984761, 0.44015239])
@@ -130,8 +130,8 @@ phase_records = [prx_BETA, prx_ALPHA];
 conditions = OrderedDict{Num, Float64}(P => 101325.0, ℵ_BETA=>0.0, X_B=>0.5, N=>1.0)
 
 # Composition sets
-compset_BETA = Calphad.CompSet(prx_BETA, [0.55911824, 0.44088176], 0.0)
-compset_ALPHA = Calphad.CompSet(prx_ALPHA, [0.5, 0.5], 1.0)
+compset_BETA = CompSet(prx_BETA, [0.55911824, 0.44088176], 0.0)
+compset_ALPHA = CompSet(prx_ALPHA, [0.5, 0.5], 1.0)
 compsets = [compset_BETA, compset_ALPHA]
 free_phase_idxs = [2]
 
@@ -139,7 +139,7 @@ free_pots = OrderedDict{Num, Float64}(T => 1000.0)  # initial guess
 
 println(conditions)
 println(compsets)
-Calphad.find_solution(elements, compsets, free_pots, conditions, free_phase_idxs; max_iters=100, verbose=false)
+find_solution(elements, compsets, free_pots, conditions, free_phase_idxs; max_iters=100, verbose=false)
 println(compsets)
 println(free_pots)
 
@@ -162,7 +162,7 @@ phase_records = [prx_M2O3];
 conditions = OrderedDict{Num, Float64}(P => 101325.0, T=>1000.0, MU_O=>0.0, X_B=>0.2, N=>1.0)
 
 # Composition sets
-compset_M2O3 = Calphad.CompSet(prx_M2O3, [0.51, 0.49, 1.0], 0.2)
+compset_M2O3 = CompSet(prx_M2O3, [0.51, 0.49, 1.0], 0.2)
 compsets = [compset_M2O3]
 free_phase_idxs = [1]
 
@@ -170,7 +170,7 @@ free_pots = OrderedDict{Num, Float64}()  # initial guess
 
 println(conditions)
 println(compsets)
-Calphad.find_solution(elements, compsets, free_pots, conditions, free_phase_idxs; max_iters=100, verbose=false)
+find_solution(elements, compsets, free_pots, conditions, free_phase_idxs; max_iters=100, verbose=false)
 println(compsets)
 @test !any(isnan.(compsets[1].Y))
 @test compsets[1].ℵ ≈ 0.2
