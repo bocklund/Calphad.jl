@@ -176,7 +176,7 @@ function isphasecond(cond::Num)
 end
 
 function vectorize_inputs(compsets::Vector{CompSet}, free_potentials::OrderedDict{Num,Float64}, conditions::OrderedDict{Num,Float64})
-    compset_conds = [vcat(cs.phase_rec.site_fractions, [cs.phase_rec.ℵ]) for cs in compsets]
+    compset_conds = [vcat(cs.phase_record.site_fractions, [cs.phase_record.ℵ]) for cs in compsets]
     return vcat(collect(keys(free_potentials)), [ky for ky in keys(conditions) if !isphasecond(ky)], compset_conds...)
 end
 
@@ -230,7 +230,7 @@ function solve_and_update(compsets::Vector{CompSet}, free_potentials::OrderedDic
         α = free_phase_idxs[β]
         Δℵ = soln[end-num_free_phases+β]
         if doprint
-            println("$(compsets[α].phase_rec.phase_name): Δℵ=$(Δℵ)")
+            println("$(compsets[α].phase_record.phase_name): Δℵ=$(Δℵ)")
         end
         compsets[α].ℵ = max(compsets[α].ℵ+Δℵ, 0.0)
     end
@@ -238,7 +238,7 @@ function solve_and_update(compsets::Vector{CompSet}, free_potentials::OrderedDic
     for α in 1:length(compsets)
         Δy = delta_y_funcs[α](x)
         if doprint
-            println("$(compsets[α].phase_rec.phase_name): Δy=$(Δy) (step size=$step_size)")
+            println("$(compsets[α].phase_record.phase_name): Δy=$(Δy) (step size=$step_size)")
         end
         compsets[α].Y += step_size*Δy
     end

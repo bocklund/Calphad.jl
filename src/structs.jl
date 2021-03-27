@@ -65,12 +65,12 @@ function PhaseRecord(phase_name, obj, mass, potentials, site_fractions, sublatti
 end
 
 mutable struct CompSet
-    phase_rec::PhaseRecord
+    phase_record::PhaseRecord
     Y::Vector{Float64}
     ℵ::Float64
 end
 
 function Base.show(io::IO, composition_set::CompSet)
     print(string(typeof(composition_set)))
-    print("($(composition_set.phase_rec.phase_name), $(composition_set.Y), $(composition_set.ℵ))")
+    print("($(composition_set.phase_record.phase_name), $(composition_set.Y), $(composition_set.ℵ))")
 end
