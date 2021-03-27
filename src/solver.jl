@@ -171,9 +171,9 @@ end
 
 # TODO: test this with vectorize_values. It's important that the uniqueness of
 # inputs and the order is preserved between inputs and values.
-function vectorize_inputs(compsets::Vector{CompSet}, free_potentials::OrderedDict{Num,Float64}, conditions::OrderedDict{Num,Float64})
-    compset_conds = [vcat(cs.phase_record.site_fractions, [cs.phase_record.ℵ]) for cs in compsets]
-    return vcat(collect(keys(free_potentials)), [ky for ky in keys(conditions) if !isphasecond(ky)], compset_conds...)
+function vectorize_inputs(phase_records::Vector{PhaseRecord}, free_potentials::OrderedDict{Num,Float64}, conditions::OrderedDict{Num,Float64})
+    phase_rec_conds = [vcat(prx.site_fractions, [prx.ℵ]) for prx in phase_records]
+    return vcat(collect(keys(free_potentials)), [ky for ky in keys(conditions) if !isphasecond(ky)], phase_rec_conds...)
 end
 
 function vectorize_values(compsets::Vector{CompSet}, free_potentials::OrderedDict{Num,Float64}, conditions::OrderedDict{Num,Float64})
@@ -223,6 +223,29 @@ function update(compsets::Vector{CompSet}, x::Vector{Float64}, soln::Vector{Floa
     end
 end
 
+# TODO: benchmark. Maybe investigate caching or other speed workarounds, depending on how long it takes.
+"""
+    `solution_functions`
+
+This function does not depend on any concrete values and should be valid for
+_any_ specific problem so long as the elements, phases, `keys(free_potentials)`
+and `keys(conditions)` are the same.
+
+"""
+function solution_functions(elements, phase_records, free_potentials, conditions, free_phase_idxs)
+    # Solve symbolically and compile solution function
+    cond_keys = collect(keys(conditions))
+    A, b = get_solution_parts(phase_records, elements, cond_keys);
+    sym_soln = A \ b
+    sym_Delta_y_mats = get_Delta_y_mat.(phase_records, (elements,), (cond_keys,));
+    inp = vectorize_inputs(phase_records, free_potentials, conditions)
+    soln_func = Calphad.build_callable(sym_soln, inp)
+    # Compile Δy functions
+    delta_y_funcs = Calphad.build_delta_y_callables(sym_Delta_y_mats, sym_soln, inp, length(free_phase_idxs))
+
+    return soln_func, delta_y_funcs
+end
+
 # TODO: free_phase_idxs could probably be removed if composition sets can keep
 # information about whether or not they are fixed amount.
 """
@@ -234,28 +257,19 @@ Find a solution to a point calculation.
 Composition sets and free potenetials are updated in-place.
 Free chemical potentials are returned.
 """
-function find_solution(elements::Vector{String}, compsets::Vector{CompSet},
+function find_solution(soln_func::Function, delta_y_funcs::Vector{Function},
+                       compsets::Vector{CompSet},
                        free_potentials::OrderedDict{Num,Float64},
                        conditions::OrderedDict{Num,Float64},
                        free_phase_idxs::Vector{Int};
                        max_iters=1000, verbose=false)
     # Get the symbolic solution and Δy matrix
-    phase_records = [cs.phase_record for cs in compsets]
-    cond_keys = collect(keys(conditions))
 
-    # TODO: move these "solution preparation" steps outside this method. That
-    # would allow them to be re-used (and possibly cached) across
-    # multidimensional step/map calculations.
-
-    # Compile solution and Δy functions
-    A, b = get_solution_parts(phase_records, elements, cond_keys);
-    sym_soln = A \ b
-    sym_Delta_y_mats = get_Delta_y_mat.(phase_records, (elements,), (cond_keys,));
-    inp = vectorize_inputs(compsets, free_potentials, conditions)
-    soln_func = Calphad.build_callable(sym_soln, inp)
-    delta_y_funcs = Calphad.build_delta_y_callables(sym_Delta_y_mats, sym_soln, inp, length(free_phase_idxs))
-
-    num_free_chempots = length(sym_soln) - length(free_potentials) - length(free_phase_idxs)
+    # Do an initial solve to get the dimension of the solution.
+    # This call should be fast and we don't care about the data
+    x = vectorize_values(compsets, free_potentials, conditions)
+    soln = soln_func(x)
+    num_free_chempots = length(soln) - length(free_potentials) - length(free_phase_idxs)
     chempots = Vector{Float64}(undef, num_free_chempots)
 
     for iter in 1:max_iters
