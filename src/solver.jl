@@ -268,3 +268,67 @@ function solve_and_update(compsets::Vector{CompSet}, free_potentials::OrderedDic
     end
     return chempots
 end
+
+# TODO: free_phase_idxs could probably be removed if composition sets can keep
+# information about whether or not they are fixed amount.
+"""
+
+    `find_solution`
+
+Composition sets and free potenetials are updated in-place.
+Free chemical potentials are returned.
+"""
+function find_solution(elements::Vector{String}, compsets::Vector{CompSet},
+                       free_potentials::OrderedDict{Num,Float64},
+                       conditions::OrderedDict{Num,Float64},
+                       free_phase_idxs::Vector{Int};
+                       max_iters=1000, verbose=false)
+    # Get the symbolic solution and Δy matrix
+    phase_records = [cs.phase_record for cs in compsets]
+    cond_keys = collect(keys(conditions))
+
+    # Compile solution and Δy functions
+    A, b = get_solution_parts(phase_records, elements, cond_keys);
+    sym_soln = A \ b
+    sym_Delta_y_mats = get_Delta_y_mat.(phase_records, (elements,), (cond_keys,));
+    inp = vectorize_inputs(compsets, free_potentials, conditions)
+    soln_func = Calphad.build_callable(sym_soln, inp)
+    delta_y_funcs = Calphad.build_delta_y_callables(sym_Delta_y_mats, sym_soln, inp, length(free_phase_idxs))
+
+    num_free_chempots = length(sym_soln) - length(free_potentials) - length(free_phase_idxs)
+    chempots = Vector{Float64}(undef, num_free_chempots)
+
+    for iter in 1:max_iters
+        # Step 1: solve
+        x = vectorize_values(compsets, free_potentials, conditions)
+        soln = soln_func(x)
+        if verbose
+            println("x: ", x)
+            println("equilibrium_soln: ", soln)
+        end
+        # Extract chemical potentials
+        chempots[:] = soln[1:num_free_chempots]
+
+        converged = false  # TODO: check convergence
+        if converged
+            break
+        else
+            # Step 2: update
+            # Update free potentials
+            # TODO: assumes free potentials are in the same order as the
+            # potentials in the solution vector, is there a way to enforce this
+            # structurally without incurring overhead time? Maybe nothing
+            # needs to be done if unpack_indices isn't sorting them
+            for (i, (ky, val)) in enumerate(free_potentials)
+                # offset for number of free chemical potentials
+                free_potentials[ky] = val + soln[num_free_chempots+i]
+            end
+            # Update composition sets
+            # TODO: step size control
+            update(compsets, x, soln, delta_y_funcs, free_phase_idxs; step_size=0.01, verbose=false)
+
+            # TODO: add/remove composition sets
+        end
+    end
+    return chempots
+end
