@@ -117,12 +117,6 @@ function get_solution_parts(phase_records, elements, conditions_keys)
     return A, b
 end
 
-function get_solution(phase_records, elements, conditions_keys)
-    A, b = get_solution_parts(phase_records, elements, conditions_keys)
-    soln = A \ b
-    return soln
-end
-
 
 @doc raw"""
     get_Delta_y_mat
@@ -205,10 +199,6 @@ function build_delta_y_callables(delta_y_matrices::Vector{Matrix{Num}}, soln::Ve
     return funcs
 end
 
-# TODO: test that phase amount updating works properly. Most I've seen so far
-# keep Δℵ close to zero (single phase, but I think phase amount should still)
-# change because the mass condition RHS shouldn't be satisfied, that is:
-# (`(N_A - Ñ_A) != 0`)
 function update(compsets::Vector{CompSet}, x::Vector{Float64}, soln::Vector{Float64}, delta_y_funcs::Vector{Function}, free_phase_idxs::Vector{Int}; step_size=1.0, verbose=false)
     num_free_phases = length(free_phase_idxs)
     # Update Δℵ
@@ -230,6 +220,7 @@ function update(compsets::Vector{CompSet}, x::Vector{Float64}, soln::Vector{Floa
         compsets[α].Y += step_size*Δy
     end
 end
+
 function solve_and_update(compsets::Vector{CompSet}, free_potentials::OrderedDict{Num,Float64}, conditions::OrderedDict{Num,Float64}, soln_func::Function, delta_y_funcs::Vector{Function}, free_phase_idxs::Vector{Int}; step_size=1.0, verbose=false)
     num_free_phases = length(free_phase_idxs)
     x = vectorize_values(compsets, free_potentials, conditions)
