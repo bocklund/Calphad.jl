@@ -169,6 +169,8 @@ function isphasecond(cond::Num)
     return startswith(str_cond, "ℵ_")
 end
 
+# TODO: test this with vectorize_values. It's important that the uniqueness of
+# inputs and the order is preserved between inputs and values.
 function vectorize_inputs(compsets::Vector{CompSet}, free_potentials::OrderedDict{Num,Float64}, conditions::OrderedDict{Num,Float64})
     compset_conds = [vcat(cs.phase_record.site_fractions, [cs.phase_record.ℵ]) for cs in compsets]
     return vcat(collect(keys(free_potentials)), [ky for ky in keys(conditions) if !isphasecond(ky)], compset_conds...)
@@ -227,6 +229,8 @@ end
 
     `find_solution`
 
+Find a solution to a point calculation.
+
 Composition sets and free potenetials are updated in-place.
 Free chemical potentials are returned.
 """
@@ -238,6 +242,10 @@ function find_solution(elements::Vector{String}, compsets::Vector{CompSet},
     # Get the symbolic solution and Δy matrix
     phase_records = [cs.phase_record for cs in compsets]
     cond_keys = collect(keys(conditions))
+
+    # TODO: move these "solution preparation" steps outside this method. That
+    # would allow them to be re-used (and possibly cached) across
+    # multidimensional step/map calculations.
 
     # Compile solution and Δy functions
     A, b = get_solution_parts(phase_records, elements, cond_keys);
