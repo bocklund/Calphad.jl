@@ -76,7 +76,8 @@ println(conditions)
 println(compsets)
 # Only take one step because we are trying to confirm the solution
 soln_func, delta_y_funcs = Calphad.solution_functions(elements, phase_records, free_pots, conditions, free_phase_idxs)
-find_solution(soln_func, delta_y_funcs, compsets, free_pots, conditions, free_phase_idxs; max_iters=1, verbose=true)
+chempots, niters = find_solution(soln_func, delta_y_funcs, compsets, free_pots, conditions, free_phase_idxs; max_iters=1, verbose=true)
+println(chempots, " ", niters, " iterations")
 println(compsets)
 # pycalphad solution for step_size = 0.01
 @test all(compset_BETA.Y .≈ [0.5591255569183224, 0.4408744430816775])
@@ -86,12 +87,13 @@ println(compsets)
 
 # Now we minimize
 println(compsets)
-find_solution(soln_func, delta_y_funcs, compsets, free_pots, conditions, free_phase_idxs; max_iters=10000, verbose=false)
+chempots, niters = find_solution(soln_func, delta_y_funcs, compsets, free_pots, conditions, free_phase_idxs; max_iters=10000, verbose=false)
+println(chempots, " ", niters, " iterations")
 println(compsets)
 # pycalphad verified solution
-@test all(compset_BETA.Y .≈ [0.55984761, 0.44015239])
+@test all(isapprox(compset_BETA.Y, [0.55984761, 0.44015239], atol = 1e-6))
 @test compset_BETA.ℵ ≈ 0.5
-@test all(compset_ALPHA.Y .≈ [0.44015239, 0.55984761])
+@test all(isapprox(compset_ALPHA.Y, [0.44015239, 0.55984761], atol = 1e-6))
 @test compset_ALPHA.ℵ ≈ 0.5
 
 end
@@ -134,7 +136,8 @@ free_pots = OrderedDict{Num, Float64}(T => 1000.0)  # initial guess
 println(conditions)
 println(compsets)
 soln_func, delta_y_funcs = Calphad.solution_functions(elements, phase_records, free_pots, conditions, free_phase_idxs)
-find_solution(soln_func, delta_y_funcs, compsets, free_pots, conditions, free_phase_idxs; max_iters=100, verbose=false)
+chempots, niters = find_solution(soln_func, delta_y_funcs, compsets, free_pots, conditions, free_phase_idxs; max_iters=100, verbose=false)
+println(chempots, " ", niters, " iterations")
 println(compsets)
 println(free_pots)
 
@@ -166,7 +169,8 @@ free_pots = OrderedDict{Num, Float64}()  # initial guess
 println(conditions)
 println(compsets)
 soln_func, delta_y_funcs = Calphad.solution_functions(elements, phase_records, free_pots, conditions, free_phase_idxs)
-find_solution(soln_func, delta_y_funcs, compsets, free_pots, conditions, free_phase_idxs; max_iters=100, verbose=false)
+chempots, niters = find_solution(soln_func, delta_y_funcs, compsets, free_pots, conditions, free_phase_idxs; max_iters=100, verbose=false)
+println(chempots, " ", niters, " iterations")
 println(compsets)
 @test !any(isnan.(compsets[1].Y))
 @test compsets[1].ℵ ≈ 0.2
