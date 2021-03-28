@@ -76,8 +76,11 @@ println(conditions)
 println(compsets)
 # Only take one step because we are trying to confirm the solution
 soln_func, delta_y_funcs = Calphad.solution_functions(elements, phase_records, free_pots, conditions, free_phase_idxs)
-chempots, niters = find_solution(soln_func, delta_y_funcs, compsets, free_pots, conditions, free_phase_idxs; max_iters=1, verbose=true)
-println(chempots, " ", niters, " iterations")
+# We don't find_solution here so we can control the step size to verify against pycalphad
+# Solve and update
+x = Calphad.vectorize_values(compsets, free_pots, conditions)
+soln = soln_func(x)
+Calphad.update(compsets, x, soln, delta_y_funcs, free_phase_idxs; step_size=0.01, verbose=true)
 println(compsets)
 # pycalphad solution for step_size = 0.01
 @test all(compset_BETA.Y .≈ [0.5591255569183224, 0.4408744430816775])

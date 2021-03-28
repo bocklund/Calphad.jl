@@ -325,7 +325,7 @@ function find_solution(soln_func::Function, delta_y_funcs::Vector{Function},
             end
             # Update composition sets
             # TODO: step size control
-            update(compsets, x, soln, delta_y_funcs, free_phase_idxs; step_size=0.01, verbose=false)
+            update(compsets, x, soln, delta_y_funcs, free_phase_idxs; step_size=0.1, verbose=false)
 
             # TODO: add/remove composition sets
         end
