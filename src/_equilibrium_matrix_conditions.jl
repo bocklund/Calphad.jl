@@ -229,12 +229,12 @@ See the function `get_N_A_row_rhs`. This is the corresponding mole fraction cond
 # Equation
 
 ```math
-\sum_{B_{\mathrm{free}}} \sum_\alpha \sum_i \frac{\aleph^\alpha c_{iB}}{N} \left( \frac{\partial M_A^\alpha}{\partial y_i^\alpha} - x_A \sum_C \frac{\partial M_C^\alpha}{\partial y_i^\alpha} \right)  \mu_B & \\
-+ \sum_\mathrm{Pot} \sum_\alpha \sum_i \frac{\aleph^\alpha c_{i\mathrm{Pot}}}{N} \left( \frac{\partial M_A^\alpha}{\partial y_i^\alpha} - x_A \sum_C \frac{\partial M_C^\alpha}{\partial y_i^\alpha} \right)  \Delta \mathrm{Pot} & \\
-+ \sum_{\beta_\mathrm{free}} \frac{1}{N} \left( M_A^\beta - x_A \sum_C M_C^\beta \right) \Delta \aleph^\beta &
+\sum_{B_{\mathrm{free}}} \sum_\alpha \sum_i \frac{\aleph^\alpha c_{iB}}{N} \left( \frac{\partial M_A^\alpha}{\partial y_i^\alpha} - x_A \sum_C \frac{\partial M_C^\alpha}{\partial y_i^\alpha} \right)  \mu_B \\
++ \sum_\mathrm{Pot} \sum_\alpha \sum_i \frac{\aleph^\alpha c_{i\mathrm{Pot}}}{N} \left( \frac{\partial M_A^\alpha}{\partial y_i^\alpha} - x_A \sum_C \frac{\partial M_C^\alpha}{\partial y_i^\alpha} \right)  \Delta \mathrm{Pot} \\
++ \sum_{\beta_\mathrm{free}} \frac{1}{N} \left( M_A^\beta - x_A \sum_C M_C^\beta \right) \Delta \aleph^\beta \\
 = - \sum_\alpha \sum_i \frac{\aleph^\alpha c_{iG}}{N} \left( \frac{\partial M_A^\alpha}{\partial y_i^\alpha} - x_A \sum_C \frac{\partial M_C^\alpha}{\partial y_i^\alpha} \right) \\
-& - \sum_{B_{\mathrm{fixed}}} \sum_\alpha \sum_i \frac{\aleph^\alpha c_{iB}}{N} \left( \frac{\partial M_A^\alpha}{\partial y_i^\alpha} - x_A \sum_C \frac{\partial M_C^\alpha}{\partial y_i^\alpha} \right)  \mu_B \\
-& + \left( \tilde{x}_A - x_A \right) \\
+- \sum_{B_{\mathrm{fixed}}} \sum_\alpha \sum_i \frac{\aleph^\alpha c_{iB}}{N} \left( \frac{\partial M_A^\alpha}{\partial y_i^\alpha} - x_A \sum_C \frac{\partial M_C^\alpha}{\partial y_i^\alpha} \right)  \mu_B \\
++ \left( \tilde{x}_A - x_A \right)
 ```
 """
 function get_x_A_row_rhs(phase_records, el_idx, x_A_prescribed,
