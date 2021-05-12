@@ -20,6 +20,15 @@
 # prescribed value. It's not clear to me mathematically why this is, but it is easy to
 # verify for an ideal system that is not mass balanced that this should be the case.
 
+@doc raw"""
+    c_iG
+
+# Equation
+
+```math
+c^\alpha_{iG} = -\sum_j e^\alpha_{ij} \frac{\partial G^\alpha_M}{\partial y^\alpha_j}
+```
+"""
 function c_iG(phase_record, i)
     # c^\alpha_{iG} = -\sum_j e^\alpha_{ij} \frac{\partial G^\alpha_M}{\partial y^\alpha_j}
     total = 0.0
@@ -30,8 +39,16 @@ function c_iG(phase_record, i)
     return -total
 end
 
+@doc raw"""
+    c_iPot
+
+# Equation
+
+```math
+c^\alpha_{i\mathrm{Pot}} = -\sum_j e^\alpha_{ij} \frac{\partial^2 G^\alpha_M}{\partial \mathrm{Pot} \partial y^\alpha_j}
+```
+"""
 function c_iPot(phase_record, i, pot_idx)
-    # c^\alpha_{i\mathrm{Pot}} = -\sum_j e^\alpha_{ij} \frac{\partial^2 G^\alpha_M}{\partial \mathrm{Pot} \partial y^\alpha_j}
     total = 0.0
     state_vars_offset = length(phase_record.state_variables)
     for j in 1:length(phase_record.site_fractions)
@@ -40,8 +57,16 @@ function c_iPot(phase_record, i, pot_idx)
     return -total
 end
 
+@doc raw"""
+    c_iA
+
+# Equation
+
+```math
+c^\alpha_{iA} = \sum_j e^\alpha_{ij} \frac{\partial M^\alpha_A}{\partial y^\alpha_j}
+```
+"""
 function c_iA(phase_record, i, A)
-    # c^\alpha_{iA} = \sum_j e^\alpha_{ij} \frac{\partial M^\alpha_A}{\partial y^\alpha_j}
     total = 0.0
     state_vars_offset = length(phase_record.state_variables)
     for j in 1:length(phase_record.site_fractions)
@@ -51,6 +76,7 @@ function c_iA(phase_record, i, A)
 end
 
 @doc raw"""
+    get_stable_phase_row_rhs
 
 # Examples
 ```
@@ -100,7 +126,7 @@ end
 
 
 @doc raw"""
-get_N_A_row_rhs
+    get_N_A_row_rhs
 
 # Examples
 ```
@@ -203,18 +229,11 @@ See the function `get_N_A_row_rhs`. This is the corresponding mole fraction cond
 # Equation
 
 ```math
-% Free chemical potential columns (μ_B)
 \sum_{B_{\mathrm{free}}} \sum_\alpha \sum_i \frac{\aleph^\alpha c_{iB}}{N} \left( \frac{\partial M_A^\alpha}{\partial y_i^\alpha} - x_A \sum_C \frac{\partial M_C^\alpha}{\partial y_i^\alpha} \right)  \mu_B & \\
-% Free potential columns (ΔP)
 + \sum_\mathrm{Pot} \sum_\alpha \sum_i \frac{\aleph^\alpha c_{i\mathrm{Pot}}}{N} \left( \frac{\partial M_A^\alpha}{\partial y_i^\alpha} - x_A \sum_C \frac{\partial M_C^\alpha}{\partial y_i^\alpha} \right)  \Delta \mathrm{Pot} & \\
-% Free phase amount columns (Δℵ)
 + \sum_{\beta_\mathrm{free}} \frac{1}{N} \left( M_A^\beta - x_A \sum_C M_C^\beta \right) \Delta \aleph^\beta &
-% Right-hand side (constant)
-% c_iG
 = - \sum_\alpha \sum_i \frac{\aleph^\alpha c_{iG}}{N} \left( \frac{\partial M_A^\alpha}{\partial y_i^\alpha} - x_A \sum_C \frac{\partial M_C^\alpha}{\partial y_i^\alpha} \right) \\
-% Fixed chemical potentials
 & - \sum_{B_{\mathrm{fixed}}} \sum_\alpha \sum_i \frac{\aleph^\alpha c_{iB}}{N} \left( \frac{\partial M_A^\alpha}{\partial y_i^\alpha} - x_A \sum_C \frac{\partial M_C^\alpha}{\partial y_i^\alpha} \right)  \mu_B \\
-% The term for the condition
 & + \left( \tilde{x}_A - x_A \right) \\
 ```
 """
